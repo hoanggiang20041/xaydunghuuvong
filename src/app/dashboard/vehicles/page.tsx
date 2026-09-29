@@ -5,6 +5,7 @@ import { toast } from '@/components/ui/toaster'
 import { Car, Search, Plus, Loader2, Edit2, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { normalizePlateNumber } from '@/lib/plate-utils'
 
 export default function VehiclesPage() {
   const { hasPermission } = useAuth()
@@ -169,7 +170,13 @@ export default function VehiclesPage() {
             <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
               Biển số <span className="text-red-500">*</span>
             </label>
-            <input required value={formData.plateNumber} onChange={e => setFormData(p => ({...p, plateNumber: e.target.value.toUpperCase()}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none uppercase font-mono transition-all" />
+            <input 
+              required 
+              value={formData.plateNumber} 
+              onChange={e => setFormData(p => ({...p, plateNumber: e.target.value.toUpperCase()}))} 
+              onBlur={() => setFormData(p => ({...p, plateNumber: normalizePlateNumber(p.plateNumber)}))}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none uppercase font-mono transition-all" 
+            />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Loại xe</label>

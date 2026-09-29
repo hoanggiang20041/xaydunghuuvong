@@ -7,6 +7,7 @@ import { auditAction } from '@/lib/audit'
 import { successResponse, errorResponse, unauthorizedResponse, forbiddenResponse, notFoundResponse, validationErrorResponse, serverErrorResponse, parsePagination } from '@/lib/api-response'
 import { createTripSchema } from '@/lib/validation'
 import { generateTripCode, startOfDay, endOfDay } from '@/lib/date-utils'
+import { normalizePlateNumber } from '@/lib/plate-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -115,10 +116,9 @@ export async function POST(request: NextRequest) {
       return forbiddenResponse('Bạn không có quyền truy cập công trình này')
     }
 
-    // Resolve vehicleId
     let vehicleId = data.vehicleId;
     if (!vehicleId && data.plateNumber) {
-      const plateUpper = data.plateNumber.toUpperCase().replace(/\s+/g, '');
+      const plateUpper = normalizePlateNumber(data.plateNumber);
       let vehicle = await prisma.vehicle.findUnique({
         where: { plateNumber: plateUpper }
       });

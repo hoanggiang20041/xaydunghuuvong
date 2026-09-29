@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from '@/components/ui/toaster'
 import { Camera, Truck, ArrowRightToLine, ArrowLeftFromLine, Loader2, Search } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { normalizePlateNumber } from '@/lib/plate-utils'
 
 export default function QuickActionPage() {
   const router = useRouter()
@@ -264,9 +265,9 @@ export default function QuickActionPage() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
               <input 
                 type="text" 
-                required
                 value={plateNumber}
                 onChange={e => setPlateNumber(e.target.value.toUpperCase())}
+                onBlur={() => setPlateNumber(normalizePlateNumber(plateNumber))}
                 placeholder="VD: 51C-123.45"
                 className="w-full pl-12 pr-4 py-4 text-xl font-bold bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 focus:outline-none uppercase"
               />

@@ -8,6 +8,7 @@ import {
   ArrowDownToLine, Search, Truck, Loader2, CheckCircle2, AlertTriangle, X, Camera
 } from 'lucide-react'
 import Link from 'next/link'
+import { normalizePlateNumber } from '@/lib/plate-utils'
 
 export default function CheckInPage() {
   const router = useRouter()
@@ -267,8 +268,9 @@ export default function CheckInPage() {
                 setSelectedVehicle(null)
                 setDuplicateWarning('')
               }}
+              onBlur={() => setPlateNumber(normalizePlateNumber(plateNumber))}
               placeholder="Nhập biển số xe (VD: 51D12345)"
-              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl text-lg font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl text-lg font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition uppercase"
               autoFocus
               autoComplete="off"
             />
