@@ -367,6 +367,8 @@ model Trip {
   actualVolume     Decimal?   @map("actual_volume") @db.Decimal(10, 2)
   checkInAt        DateTime?  @map("check_in_at")
   checkOutAt       DateTime?  @map("check_out_at")
+  checkInPhotoUrl  String?    @map("check_in_photo_url") @db.Text
+  checkOutPhotoUrl String?    @map("check_out_photo_url") @db.Text
   status           TripStatus @default(CHECKED_IN)
   notes            String?    @db.Text
   createdById      String     @map("created_by_id")

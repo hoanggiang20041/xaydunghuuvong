@@ -127,6 +127,7 @@ async function handleCheckOut(trip: any, body: any, user: any) {
         status: 'COMPLETED', // Check-out + complete in one step for fast flow
         checkOutAt: new Date(), // Server timestamp
         actualVolume: parsed.data.actualVolume || trip.expectedVolume,
+        checkOutPhotoUrl: parsed.data.checkOutPhotoUrl,
         checkedOutById: user.id,
         confirmedById: user.id,
         notes: parsed.data.notes || trip.notes,

@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
           pickupLocationId: data.pickupLocationId,
           dumpLocationId: data.dumpLocationId,
           expectedVolume: data.expectedVolume,
+          checkInPhotoUrl: data.checkInPhotoUrl,
           checkInAt: new Date(), // Server timestamp
           status: 'CHECKED_IN',
           notes: data.notes,

@@ -138,11 +138,13 @@ export const createTripSchema = z.object({
   pickupLocationId: z.string().uuid().optional().nullable(),
   dumpLocationId: z.string().uuid().optional().nullable(),
   expectedVolume: z.number().positive('Số khối phải lớn hơn 0').optional().nullable(),
+  checkInPhotoUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 })
 
 export const checkOutTripSchema = z.object({
   actualVolume: z.number().positive('Số khối thực tế phải lớn hơn 0').optional().nullable(),
+  checkOutPhotoUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 })
 
