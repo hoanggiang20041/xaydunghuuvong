@@ -25,21 +25,49 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState('today')
   const [error, setError] = useState('')
   const [weather, setWeather] = useState<{ temp: number, description: string, icon: React.ReactNode } | null>(null)
+  const [locationName, setLocationName] = useState('Đồng Nai')
 
   useEffect(() => {
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=10.7626&longitude=106.6601&current_weather=true')
-      .then(r => r.json())
-      .then(d => {
-        const w = d.current_weather
-        if(w) {
-          let icon = <Sun className="w-6 h-6 text-yellow-500" />
-          let desc = "Trời nắng"
-          if (w.weathercode >= 51 && w.weathercode <= 67) { icon = <CloudRain className="w-6 h-6 text-blue-400" />; desc = "Có mưa" }
-          else if (w.weathercode >= 1 && w.weathercode <= 3) { icon = <Cloud className="w-6 h-6 text-slate-400" />; desc = "Nhiều mây" }
-          else if (w.weathercode >= 71) { icon = <CloudRain className="w-6 h-6 text-blue-600" />; desc = "Mưa lớn" }
-          setWeather({ temp: w.temperature, description: desc, icon })
-        }
-      }).catch(() => {})
+    const fetchWeather = (lat: number, lon: number, locName: string) => {
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+        .then(r => r.json())
+        .then(d => {
+          const w = d.current_weather
+          if (w) {
+            let icon = <Sun className="w-6 h-6 text-yellow-500" />
+            let desc = "Trời nắng"
+            if (w.weathercode >= 51 && w.weathercode <= 67) { icon = <CloudRain className="w-6 h-6 text-blue-400" />; desc = "Có mưa" }
+            else if (w.weathercode >= 1 && w.weathercode <= 3) { icon = <Cloud className="w-6 h-6 text-slate-400" />; desc = "Nhiều mây" }
+            else if (w.weathercode >= 71) { icon = <CloudRain className="w-6 h-6 text-blue-600" />; desc = "Mưa lớn" }
+            setWeather({ temp: w.temperature, description: desc, icon })
+            setLocationName(locName)
+          }
+        }).catch(() => {})
+    }
+
+    const defaultLat = 10.9493
+    const defaultLon = 106.8166
+    const defaultLocName = 'Đồng Nai'
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude
+          const lon = position.coords.longitude
+          fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=vi`)
+            .then(res => res.json())
+            .then(data => {
+              const loc = data.address?.village || data.address?.town || data.address?.city || data.address?.county || 'Vị trí hiện tại'
+              fetchWeather(lat, lon, loc)
+            })
+            .catch(() => fetchWeather(lat, lon, 'Vị trí hiện tại'))
+        },
+        () => fetchWeather(defaultLat, defaultLon, defaultLocName),
+        { timeout: 10000 }
+      )
+    } else {
+      fetchWeather(defaultLat, defaultLon, defaultLocName)
+    }
   }, [])
 
   const fetchStats = useCallback(async () => {
@@ -93,7 +121,7 @@ export default function DashboardPage() {
               {weather.icon}
               <div>
                 <div className="text-sm font-bold text-slate-900 dark:text-white">{weather.temp}°C</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">{weather.description} tại TP.HCM</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{weather.description} tại {locationName}</div>
               </div>
             </div>
           )}
