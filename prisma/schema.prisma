@@ -359,7 +359,7 @@ model Trip {
   tripCode         String     @unique @map("trip_code") @db.VarChar(30)
   projectId        String     @map("project_id")
   vehicleId        String     @map("vehicle_id")
-  driverId         String     @map("driver_id")
+  driverId         String?    @map("driver_id")
   materialId       String     @map("material_id")
   pickupLocationId String?    @map("pickup_location_id")
   dumpLocationId   String?    @map("dump_location_id")
@@ -382,7 +382,7 @@ model Trip {
   // Relations
   project        Project         @relation(fields: [projectId], references: [id])
   vehicle        Vehicle         @relation(fields: [vehicleId], references: [id])
-  driver         Driver          @relation(fields: [driverId], references: [id])
+  driver         Driver?         @relation(fields: [driverId], references: [id])
   material       Material        @relation(fields: [materialId], references: [id])
   pickupLocation PickupLocation? @relation(fields: [pickupLocationId], references: [id])
   dumpLocation   DumpLocation?   @relation(fields: [dumpLocationId], references: [id])

@@ -133,7 +133,7 @@ export const updateLocationSchema = createLocationSchema.partial()
 export const createTripSchema = z.object({
   projectId: z.string().uuid('Vui lòng chọn công trình'),
   vehicleId: z.string().uuid('Vui lòng chọn xe'),
-  driverId: z.string().uuid('Vui lòng chọn tài xế'),
+  driverId: z.string().uuid().optional().nullable(),
   materialId: z.string().uuid('Vui lòng chọn vật liệu'),
   pickupLocationId: z.string().uuid().optional().nullable(),
   dumpLocationId: z.string().uuid().optional().nullable(),

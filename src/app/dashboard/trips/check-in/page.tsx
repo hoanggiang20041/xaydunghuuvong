@@ -135,7 +135,7 @@ export default function CheckInPage() {
       const payload = {
         vehicleId: selectedVehicle?.id,
         projectId: formData.projectId,
-        driverId: formData.driverId,
+        driverId: formData.driverId || null,
         materialId: formData.materialId,
         expectedVolume: formData.expectedVolume ? parseFloat(formData.expectedVolume) : null,
         pickupLocationId: formData.pickupLocationId || null,
@@ -337,14 +337,13 @@ export default function CheckInPage() {
 
         {/* Driver */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tài xế *</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tài xế</label>
           <select
             value={formData.driverId}
             onChange={(e) => setFormData(prev => ({ ...prev, driverId: e.target.value }))}
             className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
-            required
           >
-            <option value="">Chọn tài xế</option>
+            <option value="">Chưa phân tài xế</option>
             {drivers.map((d: any) => (
               <option key={d.id} value={d.id}>{d.fullName} {d.phone ? `(${d.phone})` : ''}</option>
             ))}
@@ -426,7 +425,7 @@ export default function CheckInPage() {
         {/* Submit */}
         <button
           type="submit"
-          disabled={submitting || !selectedVehicle || !formData.projectId || !formData.driverId || !formData.materialId}
+          disabled={submitting || !selectedVehicle || !formData.projectId || !formData.materialId}
           className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white font-bold text-lg rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 disabled:shadow-none"
         >
           {submitting ? (

@@ -18,6 +18,8 @@ export default function VehiclesPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   const fetchVehicles = useCallback(async () => {
     setLoading(true)
@@ -97,24 +99,55 @@ export default function VehiclesPage() {
     }
   }
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} mục đã chọn?`)) return
+    setIsBulkDeleting(true)
+    try {
+      await Promise.all(selectedIds.map(id => fetch(`/api/vehicles/${id}`, { method: 'DELETE' })))
+      toast({ title: 'Đã xóa các mục đã chọn', variant: 'success' })
+      setSelectedIds([])
+      fetchVehicles()
+    } catch (err: any) {
+      toast({ title: 'Lỗi khi xóa', description: err.message, variant: 'error' })
+    } finally {
+      setIsBulkDeleting(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2"><Car className="w-5 h-5 text-amber-500" /><h1 className="text-xl font-bold text-slate-900 dark:text-white">Quản lý Xe</h1></div>
-        {hasPermission('vehicles.create') && (
-          <button onClick={handleOpenAdd} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center gap-1">
-            <Plus className="w-4 h-4" />Thêm xe
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {selectedIds.length > 0 && (
+            <button onClick={handleBulkDelete} disabled={isBulkDeleting} className="flex items-center gap-2 bg-red-100 text-red-600 hover:bg-red-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+              {isBulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Xóa {selectedIds.length} mục
+            </button>
+          )}
+          {hasPermission('vehicles.create') && (
+            <button onClick={handleOpenAdd} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center gap-1">
+              <Plus className="w-4 h-4" />Thêm xe
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm biển số, chủ xe..." className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50" /></div>
       
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {loading ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div> : vehicles.length === 0 ? <div className="text-center py-12 text-slate-500">Không có dữ liệu</div> : (
-          <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-slate-50 dark:bg-slate-800/50"><tr className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider"><th className="px-4 py-3">Biển số</th><th className="px-4 py-3">Loại xe</th><th className="px-4 py-3 hidden md:table-cell">Dung tích</th><th className="px-4 py-3 hidden md:table-cell">Chủ xe</th><th className="px-4 py-3 hidden lg:table-cell">Tài xế mặc định</th><th className="px-4 py-3">Trạng thái</th><th className="px-4 py-3 text-right">Thao tác</th></tr></thead>
+          <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-slate-50 dark:bg-slate-800/50"><tr className="text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <th className="px-4 py-3 w-10">
+              <input type="checkbox" checked={vehicles.length > 0 && selectedIds.length === vehicles.length} onChange={e => setSelectedIds(e.target.checked ? vehicles.map((v: any) => v.id) : [])} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+            </th>
+            <th className="px-4 py-3">Biển số</th><th className="px-4 py-3">Loại xe</th><th className="px-4 py-3 hidden md:table-cell">Dung tích</th><th className="px-4 py-3 hidden md:table-cell">Chủ xe</th><th className="px-4 py-3 hidden lg:table-cell">Tài xế mặc định</th><th className="px-4 py-3">Trạng thái</th><th className="px-4 py-3 text-right">Thao tác</th></tr></thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">{vehicles.map((v: any) => (
             <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+              <td className="px-4 py-3">
+                <input type="checkbox" checked={selectedIds.includes(v.id)} onChange={e => setSelectedIds(prev => e.target.checked ? [...prev, v.id] : prev.filter(id => id !== v.id))} className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+              </td>
               <td className="px-4 py-3 font-mono font-semibold text-slate-900 dark:text-white">{v.plateNumber}</td>
               <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{v.vehicleType || '-'}</td>
               <td className="px-4 py-3 hidden md:table-cell">{v.volumeCapacity ? `${Number(v.volumeCapacity)} m³` : '-'}</td>

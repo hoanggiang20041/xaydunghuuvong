@@ -26,26 +26,29 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState('today')
   const [error, setError] = useState('')
   const [weather, setWeather] = useState<{ temp: number, description: string, icon: React.ReactNode } | null>(null)
+  const [hourlyWeather, setHourlyWeather] = useState<{ time: string, temp: number, icon: React.ReactNode }[]>([])
   const [locationName, setLocationName] = useState('Đồng Nai')
   const [searchLoc, setSearchLoc] = useState('')
   const [isSearchLocOpen, setIsSearchLocOpen] = useState(false)
 
+  const getWeatherIcon = (code: number, isDay: boolean) => {
+    if (code >= 51 && code <= 67) return <CloudRain className="w-6 h-6 text-blue-400" />
+    if (code >= 1 && code <= 3) return <Cloud className="w-6 h-6 text-slate-400" />
+    if (code >= 71) return <CloudRain className="w-6 h-6 text-blue-600" />
+    return isDay ? <Sun className="w-6 h-6 text-yellow-500" /> : <Moon className="w-6 h-6 text-slate-300" />
+  }
+
   const fetchWeather = useCallback((lat: number, lon: number, locName: string) => {
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=precipitation_probability&forecast_days=1&timezone=auto`)
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=temperature_2m,weather_code,precipitation_probability&forecast_days=2&timezone=auto`)
       .then(r => r.json())
       .then(d => {
         const w = d.current_weather
         if (w) {
-          let icon = <Sun className="w-6 h-6 text-yellow-500" />
+          const icon = getWeatherIcon(w.weathercode, w.is_day === 1)
           let desc = w.is_day === 0 ? "Trời quang mây" : "Trời nắng"
-          
-          if (w.is_day === 0) {
-            icon = <Moon className="w-6 h-6 text-slate-300" />
-          }
-          
-          if (w.weathercode >= 51 && w.weathercode <= 67) { icon = <CloudRain className="w-6 h-6 text-blue-400" />; desc = "Có mưa" }
-          else if (w.weathercode >= 1 && w.weathercode <= 3) { icon = <Cloud className="w-6 h-6 text-slate-400" />; desc = "Nhiều mây" }
-          else if (w.weathercode >= 71) { icon = <CloudRain className="w-6 h-6 text-blue-600" />; desc = "Mưa lớn" }
+          if (w.weathercode >= 51 && w.weathercode <= 67) desc = "Có mưa"
+          else if (w.weathercode >= 1 && w.weathercode <= 3) desc = "Nhiều mây"
+          else if (w.weathercode >= 71) desc = "Mưa lớn"
 
           const currentHour = new Date().getHours()
           const probs = d.hourly?.precipitation_probability || []
@@ -58,6 +61,27 @@ export default function DashboardPage() {
 
           setWeather({ temp: w.temperature, description: desc, icon })
           setLocationName(locName)
+
+          if (d.hourly && d.hourly.time) {
+            const now = new Date()
+            const currentIsoHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()).toISOString().substring(0, 13) + ":00"
+            const startIndex = d.hourly.time.findIndex((t: string) => t === currentIsoHour)
+            
+            if (startIndex !== -1) {
+              const next24h = []
+              for (let i = startIndex; i < startIndex + 24 && i < d.hourly.time.length; i++) {
+                const timeStr = d.hourly.time[i]
+                const hour = new Date(timeStr).getHours()
+                const isDay = hour >= 6 && hour < 18
+                next24h.push({
+                  time: `${hour}:00`,
+                  temp: Math.round(d.hourly.temperature_2m[i]),
+                  icon: getWeatherIcon(d.hourly.weather_code[i], isDay)
+                })
+              }
+              setHourlyWeather(next24h)
+            }
+          }
         }
       }).catch(() => {})
   }, [])
@@ -157,10 +181,10 @@ export default function DashboardPage() {
             </p>
           </div>
           {weather && (
-            <div className="hidden sm:flex items-center gap-3 pl-4 ml-4 border-l border-slate-200 dark:border-slate-700 relative">
-              {weather.icon}
-              <div className="flex items-center gap-2">
-                <div>
+            <div className="hidden sm:flex items-center gap-4 pl-4 ml-4 border-l border-slate-200 dark:border-slate-700 relative group">
+              <div className="flex items-center gap-3">
+                {weather.icon}
+                <div className="flex flex-col">
                   <div className="text-sm font-bold text-slate-900 dark:text-white">{weather.temp}°C</div>
                   <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                     {weather.description} tại {locationName}
@@ -169,21 +193,37 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 </div>
-                
-                {isSearchLocOpen && (
-                  <form onSubmit={handleSearchWeather} className="absolute top-full left-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg p-2 z-50 flex gap-2 w-64">
-                    <input 
-                      autoFocus
-                      type="text" 
-                      value={searchLoc}
-                      onChange={e => setSearchLoc(e.target.value)}
-                      placeholder="Tên xã, huyện, tỉnh..." 
-                      className="flex-1 px-2 py-1 text-sm border rounded dark:bg-slate-900 dark:border-slate-700 outline-none focus:border-blue-500"
-                    />
-                    <button type="submit" className="bg-blue-600 text-white px-2 py-1 rounded text-sm hover:bg-blue-700">Tìm</button>
-                  </form>
-                )}
               </div>
+              
+              {/* Hourly Weather Dropdown/Tooltip */}
+              {hourlyWeather.length > 0 && (
+                <div className="absolute top-full right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl p-3 z-40 hidden group-hover:block w-[400px]">
+                  <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Dự báo 24h tới</div>
+                  <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
+                    {hourlyWeather.map((hw, idx) => (
+                      <div key={idx} className="flex flex-col items-center gap-1 min-w-[40px]">
+                        <span className="text-xs text-slate-500">{hw.time}</span>
+                        {hw.icon}
+                        <span className="text-sm font-bold">{hw.temp}°</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+                
+              {isSearchLocOpen && (
+                <form onSubmit={handleSearchWeather} className="absolute top-full left-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg p-2 z-50 flex gap-2 w-64">
+                  <input 
+                    autoFocus
+                    type="text" 
+                    value={searchLoc}
+                    onChange={e => setSearchLoc(e.target.value)}
+                    placeholder="Tên phường/xã, huyện..." 
+                    className="flex-1 px-2 py-1 text-sm border rounded dark:bg-slate-900 dark:border-slate-700 outline-none focus:border-blue-500"
+                  />
+                  <button type="submit" className="bg-blue-600 text-white px-2 py-1 rounded text-sm hover:bg-blue-700">Tìm</button>
+                </form>
+              )}
             </div>
           )}
         </div>
