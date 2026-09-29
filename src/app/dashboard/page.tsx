@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/use-auth'
 import Link from 'next/link'
 import {
   Truck, TrendingUp, ArrowDownToLine, ArrowUpFromLine, MapPin,
-  Package, Clock, Loader2, RefreshCw, AlertCircle
+  Package, Clock, Loader2, RefreshCw, AlertCircle, Sun, Cloud, CloudRain
 } from 'lucide-react'
 
 interface Stats {
@@ -24,6 +24,23 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('today')
   const [error, setError] = useState('')
+  const [weather, setWeather] = useState<{ temp: number, description: string, icon: React.ReactNode } | null>(null)
+
+  useEffect(() => {
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=10.7626&longitude=106.6601&current_weather=true')
+      .then(r => r.json())
+      .then(d => {
+        const w = d.current_weather
+        if(w) {
+          let icon = <Sun className="w-6 h-6 text-yellow-500" />
+          let desc = "Trời nắng"
+          if (w.weathercode >= 51 && w.weathercode <= 67) { icon = <CloudRain className="w-6 h-6 text-blue-400" />; desc = "Có mưa" }
+          else if (w.weathercode >= 1 && w.weathercode <= 3) { icon = <Cloud className="w-6 h-6 text-slate-400" />; desc = "Nhiều mây" }
+          else if (w.weathercode >= 71) { icon = <CloudRain className="w-6 h-6 text-blue-600" />; desc = "Mưa lớn" }
+          setWeather({ temp: w.temperature, description: desc, icon })
+        }
+      }).catch(() => {})
+  }, [])
 
   const fetchStats = useCallback(async () => {
     try {
@@ -61,14 +78,25 @@ export default function DashboardPage() {
   return (
     <div className="space-y-5">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
-            {greeting()}, {user?.fullName}
-          </h2>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>
-            {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              {greeting()}, <span className="text-blue-600 dark:text-blue-400">{user?.fullName || 'bạn'}</span>! 👋
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
+            </p>
+          </div>
+          {weather && (
+            <div className="hidden sm:flex items-center gap-3 pl-4 ml-4 border-l border-slate-200 dark:border-slate-700">
+              {weather.icon}
+              <div>
+                <div className="text-sm font-bold text-slate-900 dark:text-white">{weather.temp}°C</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{weather.description} tại TP.HCM</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Period filter */}
