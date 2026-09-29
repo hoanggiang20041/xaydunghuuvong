@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from '@/components/ui/toaster'
-import { ArrowUpFromLine, Search, Loader2, CheckCircle2, Clock, Package } from 'lucide-react'
+import { ArrowUpFromLine, Search, Loader2, CheckCircle2, Clock, Package, Camera } from 'lucide-react'
 
 export default function CheckOutPage() {
   const { user } = useAuth()
@@ -18,6 +18,8 @@ export default function CheckOutPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [photo, setPhoto] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Load on-site trips
   useEffect(() => {
@@ -59,6 +61,28 @@ export default function CheckOutPage() {
     setActualVolume(trip.expectedVolume?.toString() || '')
   }
 
+  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const MAX_WIDTH = 800
+        const scaleSize = MAX_WIDTH / img.width
+        canvas.width = MAX_WIDTH
+        canvas.height = img.height * scaleSize
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
+        setPhoto(canvas.toDataURL('image/jpeg', 0.7))
+      }
+      img.src = event.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handleCheckOut = async () => {
     if (!selectedTrip) return
     setSubmitting(true)
@@ -71,6 +95,7 @@ export default function CheckOutPage() {
           action: 'check_out',
           actualVolume: actualVolume ? parseFloat(actualVolume) : null,
           notes,
+          checkOutPhotoUrl: photo || null,
         }),
       })
 
@@ -86,6 +111,7 @@ export default function CheckOutPage() {
           setActualVolume('')
           setNotes('')
           setSearchQuery('')
+          setPhoto(null)
           // Remove from list
           setOnsiteTrips(prev => prev.filter(t => t.id !== selectedTrip.id))
           searchRef.current?.focus()
@@ -146,6 +172,39 @@ export default function CheckOutPage() {
 
           <hr className="border-slate-100 dark:border-slate-800" />
 
+          {/* Photo Capture */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Ảnh xe ra *</label>
+            {photo ? (
+              <div className="relative rounded-xl overflow-hidden border-2 border-blue-500 aspect-video bg-black flex items-center justify-center mb-4">
+                <img src={photo} alt="Captured" className="w-full h-full object-cover" />
+                <button 
+                  type="button"
+                  onClick={() => setPhoto(null)} 
+                  className="absolute top-2 right-2 bg-black/60 text-white px-3 py-1 rounded-full text-sm hover:bg-black"
+                >
+                  Chụp lại
+                </button>
+              </div>
+            ) : (
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl aspect-video flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors mb-4"
+              >
+                <Camera className="w-10 h-10 text-slate-400" />
+                <span className="text-slate-500 font-medium text-sm">Bấm để chụp ảnh</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  capture="environment" 
+                  className="hidden" 
+                  ref={fileInputRef}
+                  onChange={handlePhotoCapture}
+                />
+              </div>
+            )}
+          </div>
+
           {/* Actual volume */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -157,7 +216,7 @@ export default function CheckOutPage() {
               min="0"
               value={actualVolume}
               onChange={(e) => setActualVolume(e.target.value)}
-              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition"
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition"
               placeholder="Nhập số khối thực tế"
             />
           </div>
@@ -169,7 +228,7 @@ export default function CheckOutPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition resize-none"
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition resize-none"
               placeholder="Ghi chú (tùy chọn)"
             />
           </div>
@@ -221,7 +280,7 @@ export default function CheckOutPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value.toUpperCase())}
           placeholder="Tìm biển số xe, tên tài xế..."
-          className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition"
+          className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition"
           autoFocus
         />
       </div>

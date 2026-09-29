@@ -29,7 +29,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchWeather = (lat: number, lon: number, locName: string) => {
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=precipitation_probability&forecast_days=1&timezone=auto`)
         .then(r => r.json())
         .then(d => {
           const w = d.current_weather
@@ -39,6 +39,17 @@ export default function DashboardPage() {
             if (w.weathercode >= 51 && w.weathercode <= 67) { icon = <CloudRain className="w-6 h-6 text-blue-400" />; desc = "Có mưa" }
             else if (w.weathercode >= 1 && w.weathercode <= 3) { icon = <Cloud className="w-6 h-6 text-slate-400" />; desc = "Nhiều mây" }
             else if (w.weathercode >= 71) { icon = <CloudRain className="w-6 h-6 text-blue-600" />; desc = "Mưa lớn" }
+
+            // Dự báo mưa
+            const currentHour = new Date().getHours()
+            const probs = d.hourly?.precipitation_probability || []
+            let willRain = false
+            for(let i = currentHour; i < Math.min(currentHour + 12, probs.length); i++) {
+              if (probs[i] > 50) willRain = true
+            }
+            if (willRain) desc += " · Sắp mưa"
+            else desc += " · Không mưa"
+
             setWeather({ temp: w.temperature, description: desc, icon })
             setLocationName(locName)
           }

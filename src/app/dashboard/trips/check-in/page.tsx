@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from '@/components/ui/toaster'
 import { 
-  ArrowDownToLine, Search, Truck, Loader2, CheckCircle2, AlertTriangle, X
+  ArrowDownToLine, Search, Truck, Loader2, CheckCircle2, AlertTriangle, X, Camera
 } from 'lucide-react'
 
 export default function CheckInPage() {
@@ -16,6 +16,8 @@ export default function CheckInPage() {
   const [plateNumber, setPlateNumber] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
+  const [photo, setPhoto] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
   const [projects, setProjects] = useState<any[]>([])
@@ -100,6 +102,28 @@ export default function CheckInPage() {
     }
   }
 
+  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        const MAX_WIDTH = 800
+        const scaleSize = MAX_WIDTH / img.width
+        canvas.width = MAX_WIDTH
+        canvas.height = img.height * scaleSize
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
+        setPhoto(canvas.toDataURL('image/jpeg', 0.7))
+      }
+      img.src = event.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedVehicle && !plateNumber) return
@@ -117,6 +141,7 @@ export default function CheckInPage() {
         pickupLocationId: formData.pickupLocationId || null,
         dumpLocationId: formData.dumpLocationId || null,
         notes: formData.notes || null,
+        checkInPhotoUrl: photo || null,
       }
 
       const res = await fetch('/api/trips', {
@@ -145,6 +170,7 @@ export default function CheckInPage() {
             dumpLocationId: '',
             notes: '',
           })
+          setPhoto(null)
           plateRef.current?.focus()
         }, 2000)
       } else {
@@ -188,6 +214,39 @@ export default function CheckInPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Photo Capture */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Ảnh xe vào *</label>
+          {photo ? (
+            <div className="relative rounded-xl overflow-hidden border-2 border-emerald-500 aspect-video bg-black flex items-center justify-center mb-4">
+              <img src={photo} alt="Captured" className="w-full h-full object-cover" />
+              <button 
+                type="button"
+                onClick={() => setPhoto(null)} 
+                className="absolute top-2 right-2 bg-black/60 text-white px-3 py-1 rounded-full text-sm hover:bg-black"
+              >
+                Chụp lại
+              </button>
+            </div>
+          ) : (
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl aspect-video flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors mb-4"
+            >
+              <Camera className="w-10 h-10 text-slate-400" />
+              <span className="text-slate-500 font-medium text-sm">Bấm để chụp ảnh</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                capture="environment" 
+                className="hidden" 
+                ref={fileInputRef}
+                onChange={handlePhotoCapture}
+              />
+            </div>
+          )}
+        </div>
+
         {/* Plate Number Search */}
         <div className="relative">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -206,7 +265,7 @@ export default function CheckInPage() {
                 setDuplicateWarning('')
               }}
               placeholder="Nhập biển số xe (VD: 51D12345)"
-              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-lg font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl text-lg font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
               autoFocus
               autoComplete="off"
             />
@@ -266,7 +325,7 @@ export default function CheckInPage() {
           <select
             value={formData.projectId}
             onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
-            className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
+            className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
             required
           >
             <option value="">Chọn công trình</option>
@@ -282,7 +341,7 @@ export default function CheckInPage() {
           <select
             value={formData.driverId}
             onChange={(e) => setFormData(prev => ({ ...prev, driverId: e.target.value }))}
-            className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
+            className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
             required
           >
             <option value="">Chọn tài xế</option>
@@ -299,7 +358,7 @@ export default function CheckInPage() {
             <select
               value={formData.materialId}
               onChange={(e) => setFormData(prev => ({ ...prev, materialId: e.target.value }))}
-              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
               required
             >
               <option value="">Chọn vật liệu</option>
@@ -317,7 +376,7 @@ export default function CheckInPage() {
               value={formData.expectedVolume}
               onChange={(e) => setFormData(prev => ({ ...prev, expectedVolume: e.target.value }))}
               placeholder="VD: 12"
-              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
             />
           </div>
         </div>
@@ -329,7 +388,7 @@ export default function CheckInPage() {
             <select
               value={formData.pickupLocationId}
               onChange={(e) => setFormData(prev => ({ ...prev, pickupLocationId: e.target.value }))}
-              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
             >
               <option value="">Chọn điểm lấy</option>
               {pickupLocations.map((l: any) => (
@@ -342,7 +401,7 @@ export default function CheckInPage() {
             <select
               value={formData.dumpLocationId}
               onChange={(e) => setFormData(prev => ({ ...prev, dumpLocationId: e.target.value }))}
-              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition"
             >
               <option value="">Chọn điểm đổ</option>
               {dumpLocations.map((l: any) => (
@@ -360,7 +419,7 @@ export default function CheckInPage() {
             onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
             placeholder="Ghi chú thêm (tùy chọn)"
             rows={2}
-            className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition resize-none"
+            className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition resize-none"
           />
         </div>
 

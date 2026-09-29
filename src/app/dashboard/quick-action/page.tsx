@@ -16,6 +16,7 @@ export default function QuickActionPage() {
   const [selectedMaterial, setSelectedMaterial] = useState('')
   const [projects, setProjects] = useState<any[]>([])
   const [selectedProject, setSelectedProject] = useState('')
+  const [expectedVolume, setExpectedVolume] = useState('')
   
   // Quick search results
   const [suggestions, setSuggestions] = useState<any[]>([])
@@ -127,7 +128,7 @@ export default function QuickActionPage() {
           vehicleId: vId,
           projectId: selectedProject,
           materialId: selectedMaterial,
-          // pickupLocationId is optional now, so we leave it undefined
+          expectedVolume: expectedVolume ? parseFloat(expectedVolume) : null,
           checkInPhotoUrl: photo
         }
 
@@ -176,6 +177,7 @@ export default function QuickActionPage() {
     setSuggestions([])
     setActiveTrip(null)
     setActualVolume('')
+    setExpectedVolume('')
   }
 
   if (!mode) {
@@ -259,7 +261,7 @@ export default function QuickActionPage() {
               value={plateNumber}
               onChange={e => setPlateNumber(e.target.value.toUpperCase())}
               placeholder="VD: 51C-123.45"
-              className="w-full pl-12 pr-4 py-4 text-xl font-bold bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none uppercase"
+              className="w-full pl-12 pr-4 py-4 text-xl font-bold bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none uppercase"
             />
           </div>
           
@@ -307,7 +309,7 @@ export default function QuickActionPage() {
                 <select 
                   value={selectedProject} 
                   onChange={e => setSelectedProject(e.target.value)}
-                  className="w-full px-4 py-4 text-lg bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none"
+                  className="w-full px-4 py-4 text-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none"
                 >
                   <option value="">-- Chọn công trình --</option>
                   {projects.map(p => (
@@ -316,6 +318,18 @@ export default function QuickActionPage() {
                 </select>
               </div>
             )}
+            
+            <div>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Số khối dự kiến (m³)</label>
+              <input 
+                type="number" 
+                step="0.1"
+                value={expectedVolume}
+                onChange={e => setExpectedVolume(e.target.value)}
+                placeholder="Ví dụ: 15.5 (có thể để trống)"
+                className="w-full px-4 py-4 text-xl font-bold bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none"
+              />
+            </div>
           </>
         )}
 
@@ -340,7 +354,7 @@ export default function QuickActionPage() {
                 value={actualVolume}
                 onChange={e => setActualVolume(e.target.value)}
                 placeholder="Ví dụ: 15.5"
-                className="w-full px-4 py-4 text-xl font-bold bg-white dark:bg-slate-800 border-2 border-blue-300 dark:border-blue-700 rounded-xl focus:border-blue-500 focus:outline-none"
+                className="w-full px-4 py-4 text-xl font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-blue-300 dark:border-blue-700 rounded-xl focus:border-blue-500 focus:outline-none"
               />
             </div>
           </div>
