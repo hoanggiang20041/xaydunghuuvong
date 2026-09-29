@@ -15,7 +15,7 @@ export default function UsersPage() {
   
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({ username: '', fullName: '', email: '', password: '', role: 'gatestaff' })
+  const [formData, setFormData] = useState({ username: '', fullName: '', email: '', password: '', role: 'GATE_STAFF' })
   const [submitting, setSubmitting] = useState(false)
 
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -38,13 +38,13 @@ export default function UsersPage() {
 
   const handleOpenAdd = () => {
     setEditingId(null)
-    setFormData({ username: '', fullName: '', email: '', password: '', role: 'gatestaff' })
+    setFormData({ username: '', fullName: '', email: '', password: '', role: 'GATE_STAFF' })
     setIsModalOpen(true)
   }
 
   const handleOpenEdit = (u: any) => {
     setEditingId(u.id)
-    const role = u.userRoles?.[0]?.role?.name || 'gatestaff'
+    const role = u.userRoles?.[0]?.role?.name || 'GATE_STAFF'
     setFormData({ username: u.username, fullName: u.fullName, email: u.email || '', password: '', role })
     setIsModalOpen(true)
   }
@@ -64,7 +64,7 @@ export default function UsersPage() {
       })
       const data = await res.json()
       
-      if (!data.success) throw new Error(data.message)
+      if (!data.success) throw new Error(data.error?.message || data.message || 'Lỗi không xác định')
       toast({ title: 'Thành công', variant: 'success' })
       setIsModalOpen(false)
       fetchUsers()
@@ -81,7 +81,7 @@ export default function UsersPage() {
     try {
       const res = await fetch(`/api/users/${deleteId}`, { method: 'DELETE' })
       const data = await res.json()
-      if (!data.success) throw new Error(data.message)
+      if (!data.success) throw new Error(data.error?.message || data.message || 'Lỗi không xác định')
       toast({ title: 'Đã xóa', variant: 'success' })
       setDeleteId(null)
       fetchUsers()
@@ -172,21 +172,21 @@ export default function UsersPage() {
             <input required value={formData.fullName} onChange={e => setFormData(p => ({...p, fullName: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
-            <input type="email" value={formData.email} onChange={e => setFormData(p => ({...p, email: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium mb-1">Email *</label>
+            <input type="email" required value={formData.email} onChange={e => setFormData(p => ({...p, email: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Mật khẩu {editingId && '(Bỏ trống nếu không đổi)'}</label>
-            <input type="password" required={!editingId} value={formData.password} onChange={e => setFormData(p => ({...p, password: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium mb-1">Mật khẩu {editingId && '(Bỏ trống nếu không đổi)'} (Tối thiểu 8 ký tự)</label>
+            <input type="password" minLength={8} required={!editingId} value={formData.password} onChange={e => setFormData(p => ({...p, password: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Vai trò</label>
             <select value={formData.role} onChange={e => setFormData(p => ({...p, role: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none">
-              <option value="gatestaff">Bảo vệ cổng (Gate Staff)</option>
-              <option value="supervisor">Giám sát (Supervisor)</option>
-              <option value="accountant">Kế toán (Accountant)</option>
-              <option value="admin">Quản lý (Admin)</option>
-              {user?.isSuperAdmin && <option value="super_admin">Quản trị tối cao (Super Admin)</option>}
+              <option value="GATE_STAFF">Bảo vệ cổng (Gate Staff)</option>
+              <option value="SUPERVISOR">Giám sát (Supervisor)</option>
+              <option value="ACCOUNTANT">Kế toán (Accountant)</option>
+              <option value="ADMIN">Quản lý (Admin)</option>
+              {user?.isSuperAdmin && <option value="SUPER_ADMIN">Quản trị tối cao (Super Admin)</option>}
             </select>
           </div>
           <div className="flex justify-end gap-2 mt-6">
