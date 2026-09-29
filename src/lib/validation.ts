@@ -34,7 +34,7 @@ export const createUserSchema = z.object({
   password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
   fullName: z.string().min(1, 'Vui lòng nhập họ tên').max(100),
   phone: z.string().max(20).optional().nullable(),
-  roleIds: z.array(z.string().uuid()).min(1, 'Phải chọn ít nhất 1 vai trò'),
+  roles: z.array(z.string()).min(1, 'Phải chọn ít nhất 1 vai trò'),
   projectIds: z.array(z.string().uuid()).optional().default([]),
 })
 
@@ -43,7 +43,7 @@ export const updateUserSchema = z.object({
   fullName: z.string().min(1).max(100).optional(),
   phone: z.string().max(20).optional().nullable(),
   isActive: z.boolean().optional(),
-  roleIds: z.array(z.string().uuid()).optional(),
+  roles: z.array(z.string()).optional(),
   projectIds: z.array(z.string().uuid()).optional(),
 })
 

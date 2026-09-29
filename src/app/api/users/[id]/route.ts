@@ -62,16 +62,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (existingEmail) return validationErrorResponse('Email đã tồn tại')
     }
 
-    if (!user.isSuperAdmin && parsed.data.roleIds) {
-      const superAdminRole = await prisma.role.findUnique({ where: { name: 'SUPER_ADMIN' } })
-      if (superAdminRole && parsed.data.roleIds.includes(superAdminRole.id)) {
-        return forbiddenResponse('Không thể gán quyền Super Admin')
+    let roleIdsToAssign: string[] = []
+    if (parsed.data.roles) {
+      const dbRoles = await prisma.role.findMany({
+        where: { name: { in: parsed.data.roles.map(r => r.toUpperCase()) } }
+      })
+
+      if (!user.isSuperAdmin) {
+        const superAdminRole = dbRoles.find(r => r.name === 'SUPER_ADMIN')
+        if (superAdminRole) {
+          return forbiddenResponse('Không thể gán quyền Super Admin')
+        }
       }
+      roleIdsToAssign = dbRoles.map(r => r.id)
     }
 
     const updatedUser = await prisma.$transaction(async (tx) => {
       const updateData: any = { ...parsed.data }
-      delete updateData.roleIds
+      delete updateData.roles
       delete updateData.projectIds
       
       const updated = await tx.user.update({
@@ -79,9 +87,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         data: updateData,
       })
 
-      if (parsed.data.roleIds) {
+      if (parsed.data.roles) {
         await tx.userRole.deleteMany({ where: { userId: id } })
-        for (const roleId of parsed.data.roleIds) {
+        for (const roleId of roleIdsToAssign) {
           await tx.userRole.create({
             data: { userId: id, roleId, assignedBy: user.id },
           })

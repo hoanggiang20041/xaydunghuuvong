@@ -66,10 +66,15 @@ export async function POST(request: NextRequest) {
     })
     if (existingUser) return validationErrorResponse('Tên đăng nhập hoặc email đã tồn tại')
 
+    // Find role IDs from role names
+    const dbRoles = await prisma.role.findMany({
+      where: { name: { in: parsed.data.roles.map(r => r.toUpperCase()) } }
+    })
+    
     // Prevent non-super-admin from assigning SUPER_ADMIN role
     if (!user.isSuperAdmin) {
-      const superAdminRole = await prisma.role.findUnique({ where: { name: 'SUPER_ADMIN' } })
-      if (superAdminRole && parsed.data.roleIds.includes(superAdminRole.id)) {
+      const superAdminRole = dbRoles.find(r => r.name === 'SUPER_ADMIN')
+      if (superAdminRole) {
         return forbiddenResponse('Không thể gán quyền Super Admin')
       }
     }
@@ -89,9 +94,9 @@ export async function POST(request: NextRequest) {
       })
 
       // Assign roles
-      for (const roleId of parsed.data.roleIds) {
+      for (const role of dbRoles) {
         await tx.userRole.create({
-          data: { userId: created.id, roleId, assignedBy: user.id },
+          data: { userId: created.id, roleId: role.id, assignedBy: user.id },
         })
       }
 

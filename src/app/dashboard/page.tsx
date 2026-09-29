@@ -5,8 +5,9 @@ import { useAuth } from '@/hooks/use-auth'
 import Link from 'next/link'
 import {
   Truck, TrendingUp, ArrowDownToLine, ArrowUpFromLine, MapPin,
-  Package, Clock, Loader2, RefreshCw, AlertCircle, Sun, Cloud, CloudRain
+  Package, Clock, Loader2, RefreshCw, AlertCircle, Sun, Cloud, CloudRain, Search, X
 } from 'lucide-react'
+import { toast } from '@/components/ui/toaster'
 
 interface Stats {
   totalTrips: number
@@ -26,35 +27,38 @@ export default function DashboardPage() {
   const [error, setError] = useState('')
   const [weather, setWeather] = useState<{ temp: number, description: string, icon: React.ReactNode } | null>(null)
   const [locationName, setLocationName] = useState('Đồng Nai')
+  const [searchLoc, setSearchLoc] = useState('')
+  const [isSearchLocOpen, setIsSearchLocOpen] = useState(false)
+
+  const fetchWeather = useCallback((lat: number, lon: number, locName: string) => {
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=precipitation_probability&forecast_days=1&timezone=auto`)
+      .then(r => r.json())
+      .then(d => {
+        const w = d.current_weather
+        if (w) {
+          let icon = <Sun className="w-6 h-6 text-yellow-500" />
+          let desc = "Trời nắng"
+          if (w.weathercode >= 51 && w.weathercode <= 67) { icon = <CloudRain className="w-6 h-6 text-blue-400" />; desc = "Có mưa" }
+          else if (w.weathercode >= 1 && w.weathercode <= 3) { icon = <Cloud className="w-6 h-6 text-slate-400" />; desc = "Nhiều mây" }
+          else if (w.weathercode >= 71) { icon = <CloudRain className="w-6 h-6 text-blue-600" />; desc = "Mưa lớn" }
+
+          const currentHour = new Date().getHours()
+          const probs = d.hourly?.precipitation_probability || []
+          let willRain = false
+          for(let i = currentHour; i < Math.min(currentHour + 12, probs.length); i++) {
+            if (probs[i] > 50) willRain = true
+          }
+          if (willRain) desc += " · Sắp mưa"
+          else desc += " · Không mưa"
+
+          setWeather({ temp: w.temperature, description: desc, icon })
+          setLocationName(locName)
+        }
+      }).catch(() => {})
+  }, [])
 
   useEffect(() => {
-    const fetchWeather = (lat: number, lon: number, locName: string) => {
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=precipitation_probability&forecast_days=1&timezone=auto`)
-        .then(r => r.json())
-        .then(d => {
-          const w = d.current_weather
-          if (w) {
-            let icon = <Sun className="w-6 h-6 text-yellow-500" />
-            let desc = "Trời nắng"
-            if (w.weathercode >= 51 && w.weathercode <= 67) { icon = <CloudRain className="w-6 h-6 text-blue-400" />; desc = "Có mưa" }
-            else if (w.weathercode >= 1 && w.weathercode <= 3) { icon = <Cloud className="w-6 h-6 text-slate-400" />; desc = "Nhiều mây" }
-            else if (w.weathercode >= 71) { icon = <CloudRain className="w-6 h-6 text-blue-600" />; desc = "Mưa lớn" }
 
-            // Dự báo mưa
-            const currentHour = new Date().getHours()
-            const probs = d.hourly?.precipitation_probability || []
-            let willRain = false
-            for(let i = currentHour; i < Math.min(currentHour + 12, probs.length); i++) {
-              if (probs[i] > 50) willRain = true
-            }
-            if (willRain) desc += " · Sắp mưa"
-            else desc += " · Không mưa"
-
-            setWeather({ temp: w.temperature, description: desc, icon })
-            setLocationName(locName)
-          }
-        }).catch(() => {})
-    }
 
     const defaultLat = 10.9493
     const defaultLon = 106.8166
@@ -79,7 +83,27 @@ export default function DashboardPage() {
     } else {
       fetchWeather(defaultLat, defaultLon, defaultLocName)
     }
-  }, [])
+  }, [fetchWeather])
+
+  const handleSearchWeather = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!searchLoc.trim()) return
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchLoc)}&format=json&limit=1&accept-language=vi`)
+      const data = await res.json()
+      if (data && data.length > 0) {
+        const { lat, lon, display_name } = data[0]
+        const shortName = display_name.split(',')[0]
+        fetchWeather(lat, lon, shortName)
+        setIsSearchLocOpen(false)
+        setSearchLoc('')
+      } else {
+        toast({ title: 'Không tìm thấy địa điểm', variant: 'error' })
+      }
+    } catch {
+      toast({ title: 'Lỗi tìm kiếm địa điểm', variant: 'error' })
+    }
+  }
 
   const fetchStats = useCallback(async () => {
     try {
@@ -128,11 +152,32 @@ export default function DashboardPage() {
             </p>
           </div>
           {weather && (
-            <div className="hidden sm:flex items-center gap-3 pl-4 ml-4 border-l border-slate-200 dark:border-slate-700">
+            <div className="hidden sm:flex items-center gap-3 pl-4 ml-4 border-l border-slate-200 dark:border-slate-700 relative">
               {weather.icon}
-              <div>
-                <div className="text-sm font-bold text-slate-900 dark:text-white">{weather.temp}°C</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">{weather.description} tại {locationName}</div>
+              <div className="flex items-center gap-2">
+                <div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-white">{weather.temp}°C</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    {weather.description} tại {locationName}
+                    <button onClick={() => setIsSearchLocOpen(!isSearchLocOpen)} className="text-blue-500 hover:text-blue-700 p-0.5" title="Thay đổi địa điểm">
+                      <Search className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+                
+                {isSearchLocOpen && (
+                  <form onSubmit={handleSearchWeather} className="absolute top-full left-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg p-2 z-50 flex gap-2 w-64">
+                    <input 
+                      autoFocus
+                      type="text" 
+                      value={searchLoc}
+                      onChange={e => setSearchLoc(e.target.value)}
+                      placeholder="Tên xã, huyện, tỉnh..." 
+                      className="flex-1 px-2 py-1 text-sm border rounded dark:bg-slate-900 dark:border-slate-700 outline-none focus:border-blue-500"
+                    />
+                    <button type="submit" className="bg-blue-600 text-white px-2 py-1 rounded text-sm hover:bg-blue-700">Tìm</button>
+                  </form>
+                )}
               </div>
             </div>
           )}
