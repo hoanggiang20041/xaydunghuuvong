@@ -181,7 +181,7 @@ export default function DashboardPage() {
             </p>
           </div>
           {weather && (
-            <div className="hidden sm:flex items-center gap-4 pl-4 ml-4 border-l border-slate-200 dark:border-slate-700 relative group">
+            <div className="flex items-center gap-4 pl-4 ml-4 border-l border-slate-200 dark:border-slate-700 relative group">
               <div className="flex items-center gap-3">
                 {weather.icon}
                 <div className="flex flex-col">
