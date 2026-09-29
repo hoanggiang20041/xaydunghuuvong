@@ -62,7 +62,12 @@ export async function POST(request: NextRequest) {
 
     // Check uniqueness
     const existingUser = await prisma.user.findFirst({
-      where: { OR: [{ username: parsed.data.username }, { email: parsed.data.email }] },
+      where: { 
+        OR: [
+          { username: { equals: parsed.data.username, mode: 'insensitive' } }, 
+          { email: { equals: parsed.data.email, mode: 'insensitive' } }
+        ] 
+      },
     })
     if (existingUser) return validationErrorResponse('Tên đăng nhập hoặc email đã tồn tại')
 

@@ -69,7 +69,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     if (parsed.data.email && parsed.data.email !== targetUser.email) {
       const existingEmail = await prisma.user.findFirst({
-        where: { email: parsed.data.email, id: { not: id } },
+        where: { email: { equals: parsed.data.email, mode: 'insensitive' }, id: { not: id } },
       })
       if (existingEmail) return validationErrorResponse('Email đã tồn tại')
     }

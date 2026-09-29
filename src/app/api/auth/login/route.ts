@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { username: username },
-          { email: username },
+          { username: { equals: username, mode: 'insensitive' } },
+          { email: { equals: username, mode: 'insensitive' } },
         ],
         deletedAt: null,
       },
