@@ -1,74 +1,143 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { hasPermission, PERMISSIONS } from '@/lib/permissions'
-import { successResponse, unauthorizedResponse, forbiddenResponse, notFoundResponse, serverErrorResponse } from '@/lib/api-response'
-import { hashPassword } from '@/lib/password'
+import { hasPermission } from '@/lib/permissions'
+import { PERMISSIONS } from '@/lib/permissions'
+import { auditAction } from '@/lib/audit'
+import { successResponse, unauthorizedResponse, forbiddenResponse, validationErrorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api-response'
+import { updateUserSchema } from '@/lib/validation'
 
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser()
     if (!user) return unauthorizedResponse()
-    if (!hasPermission(user, PERMISSIONS.USERS_MANAGE)) return forbiddenResponse()
+    if (!hasPermission(user, PERMISSIONS.USERS_VIEW)) return forbiddenResponse()
 
-    const { id } = await props.params
-    const data = await request.json()
+    const { id } = await params
 
-    const existingUser = await prisma.user.findUnique({ where: { id } })
-    if (!existingUser) return notFoundResponse('Không tìm thấy người dùng')
+    const targetUser = await prisma.user.findUnique({
+      where: { id, deletedAt: null },
+      select: {
+        id: true, username: true, email: true, fullName: true, phone: true,
+        isActive: true, isLocked: true, twoFactorEnabled: true,
+        lastLoginAt: true, createdAt: true,
+        userRoles: { include: { role: { select: { id: true, name: true, displayName: true } } } },
+        userProjects: { include: { project: { select: { id: true, name: true, code: true } } } },
+      },
+    })
 
-    const updateData: any = {
-      username: data.username,
-      fullName: data.fullName,
-      email: data.email || null,
-      isActive: data.isActive !== undefined ? data.isActive : existingUser.isActive,
+    if (!targetUser) return notFoundResponse('Người dùng không tồn tại')
+
+    return successResponse(targetUser)
+  } catch (error) {
+    console.error('Get user error:', error)
+    return serverErrorResponse()
+  }
+}
+
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return unauthorizedResponse()
+    if (!hasPermission(user, PERMISSIONS.USERS_UPDATE)) return forbiddenResponse()
+
+    const { id } = await params
+
+    const targetUser = await prisma.user.findUnique({ where: { id, deletedAt: null } })
+    if (!targetUser) return notFoundResponse('Người dùng không tồn tại')
+
+    // Prevent modifying super admin unless the current user is a super admin
+    if (targetUser.username === 'superadmin' && !user.isSuperAdmin) {
+      return forbiddenResponse('Không thể sửa thông tin Super Admin')
     }
 
-    if (data.password) {
-      updateData.passwordHash = await hashPassword(data.password)
+    const body = await request.json()
+    const parsed = updateUserSchema.safeParse(body)
+    if (!parsed.success) return validationErrorResponse(parsed.error.issues[0].message)
+
+    if (parsed.data.email && parsed.data.email !== targetUser.email) {
+      const existingEmail = await prisma.user.findFirst({
+        where: { email: parsed.data.email, id: { not: id } },
+      })
+      if (existingEmail) return validationErrorResponse('Email đã tồn tại')
+    }
+
+    if (!user.isSuperAdmin && parsed.data.roleIds) {
+      const superAdminRole = await prisma.role.findUnique({ where: { name: 'SUPER_ADMIN' } })
+      if (superAdminRole && parsed.data.roleIds.includes(superAdminRole.id)) {
+        return forbiddenResponse('Không thể gán quyền Super Admin')
+      }
     }
 
     const updatedUser = await prisma.$transaction(async (tx) => {
-      const u = await tx.user.update({
+      const updateData: any = { ...parsed.data }
+      delete updateData.roleIds
+      delete updateData.projectIds
+      
+      const updated = await tx.user.update({
         where: { id },
         data: updateData,
       })
 
-      if (data.roles && Array.isArray(data.roles)) {
+      if (parsed.data.roleIds) {
         await tx.userRole.deleteMany({ where: { userId: id } })
-        for (const roleName of data.roles) {
-          const role = await tx.role.findUnique({ where: { name: roleName } })
-          if (role) {
-            await tx.userRole.create({
-              data: { userId: id, roleId: role.id }
-            })
-          }
+        for (const roleId of parsed.data.roleIds) {
+          await tx.userRole.create({
+            data: { userId: id, roleId, assignedBy: user.id },
+          })
         }
       }
-      return u
+
+      if (parsed.data.projectIds) {
+        await tx.userProject.deleteMany({ where: { userId: id } })
+        for (const projectId of parsed.data.projectIds) {
+          await tx.userProject.create({
+            data: { userId: id, projectId, assignedBy: user.id },
+          })
+        }
+      }
+
+      return updated
     })
 
+    await auditAction(user, 'UPDATE', 'users', id, targetUser, updatedUser)
+    
     return successResponse(updatedUser)
   } catch (error) {
-    return serverErrorResponse(error)
+    console.error('Update user error:', error)
+    return serverErrorResponse()
   }
 }
 
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser()
     if (!user) return unauthorizedResponse()
-    if (!hasPermission(user, PERMISSIONS.USERS_MANAGE)) return forbiddenResponse()
+    if (!hasPermission(user, PERMISSIONS.USERS_DELETE)) return forbiddenResponse()
 
-    const { id } = await props.params
-    if (id === user.id) return serverErrorResponse(new Error('Không thể tự xóa tài khoản của mình'))
+    const { id } = await params
 
-    await prisma.user.update({
+    const targetUser = await prisma.user.findUnique({ where: { id, deletedAt: null } })
+    if (!targetUser) return notFoundResponse('Người dùng không tồn tại')
+
+    if (targetUser.username === 'superadmin') {
+      return forbiddenResponse('Không thể xóa Super Admin')
+    }
+    
+    if (targetUser.id === user.id) {
+      return forbiddenResponse('Không thể tự xóa tài khoản của mình')
+    }
+
+    const deletedUser = await prisma.user.update({
       where: { id },
-      data: { isActive: false, deletedAt: new Date() }
+      data: { deletedAt: new Date() },
     })
-    return successResponse({ deleted: true })
+
+    await auditAction(user, 'DELETE', 'users', id, targetUser, { deletedAt: deletedUser.deletedAt })
+    
+    return successResponse({ success: true })
   } catch (error) {
-    return serverErrorResponse(error)
+    console.error('Delete user error:', error)
+    return serverErrorResponse()
   }
 }
