@@ -137,23 +137,21 @@ export async function GET(request: NextRequest) {
 
     const materialMap = new Map(materials.map(m => [m.id, m]))
 
-    const volumeByMaterial = materialVolumes.map(mv => ({
-      material: materialMap.get(mv.materialId) || { name: 'Unknown', code: 'N/A', unit: 'm³' },
-      totalVolume: Number(mv._sum.actualVolume || mv._sum.expectedVolume || 0),
-      tripCount: mv._count,
-    }))
+    const volumeByMaterial = materialVolumes.map(mv => {
+      const mat = materialMap.get(mv.materialId) || { name: 'Unknown', unit: 'm³' }
+      return {
+        name: mat.name,
+        total: Number(mv._sum.actualVolume || mv._sum.expectedVolume || 0),
+        unit: mat.unit,
+      }
+    })
 
     return successResponse({
-      period,
-      dateRange: { start: dateStart.toISOString(), end: dateEnd.toISOString() },
-      summary: {
-        totalTrips,
-        checkedIn: checkedInCount,
-        completed: completedCount,
-        cancelled: cancelledCount,
-        onsite: onsiteCount,
-        totalVolume: Number(totalVolume._sum.actualVolume || totalVolume._sum.expectedVolume || 0),
-      },
+      totalTrips,
+      completedTrips: completedCount,
+      onsiteVehicles: onsiteCount,
+      totalVolume: Number(totalVolume._sum.actualVolume || totalVolume._sum.expectedVolume || 0),
+      todayTrips: checkedInCount,
       volumeByMaterial,
     })
   } catch (error) {

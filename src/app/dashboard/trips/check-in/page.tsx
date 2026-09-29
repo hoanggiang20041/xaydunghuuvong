@@ -7,6 +7,7 @@ import { toast } from '@/components/ui/toaster'
 import { 
   ArrowDownToLine, Search, Truck, Loader2, CheckCircle2, AlertTriangle, X, Camera
 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function CheckInPage() {
   const router = useRouter()
@@ -297,6 +298,15 @@ export default function CheckInPage() {
               ))}
             </div>
           )}
+          
+          {!searching && plateNumber.length >= 3 && searchResults.length === 0 && !selectedVehicle && (
+            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-4 text-center">
+              <p className="text-slate-500 dark:text-slate-400 text-sm mb-2">Không tìm thấy xe này trong hệ thống.</p>
+              <Link href="/dashboard/quick-action" className="inline-block px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition">
+                Chuyển sang "Thao tác nhanh" để tạo xe mới
+              </Link>
+            </div>
+          )}
 
           {selectedVehicle && (
             <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
@@ -432,6 +442,18 @@ export default function CheckInPage() {
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
               Đang xử lý...
+            </>
+          ) : !selectedVehicle ? (
+            <>
+              VUI LÒNG CHỌN XE TỪ GỢI Ý
+            </>
+          ) : !formData.projectId ? (
+            <>
+              VUI LÒNG CHỌN CÔNG TRÌNH
+            </>
+          ) : !formData.materialId ? (
+            <>
+              VUI LÒNG CHỌN VẬT LIỆU
             </>
           ) : (
             <>

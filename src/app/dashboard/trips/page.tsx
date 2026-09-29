@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from '@/components/ui/toaster'
 import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '@/lib/constants'
-import { Route, Search, Filter, Loader2, Eye, Clock } from 'lucide-react'
+import { Route, Search, Filter, Loader2, Eye, Clock, Camera, X } from 'lucide-react'
 import Link from 'next/link'
 
 export default function TripsPage() {
@@ -16,6 +16,7 @@ export default function TripsPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [viewImage, setViewImage] = useState<string | null>(null)
 
   const fetchTrips = useCallback(async () => {
     setLoading(true)
@@ -98,6 +99,7 @@ export default function TripsPage() {
                   <th className="px-4 py-3 hidden lg:table-cell">Vật liệu</th>
                   <th className="px-4 py-3">m³</th>
                   <th className="px-4 py-3 hidden xl:table-cell">Điểm đổ</th>
+                  <th className="px-4 py-3 text-center">Ảnh</th>
                   <th className="px-4 py-3 hidden md:table-cell">Giờ vào</th>
                   <th className="px-4 py-3 hidden lg:table-cell">Giờ ra</th>
                   <th className="px-4 py-3">Trạng thái</th>
@@ -118,6 +120,20 @@ export default function TripsPage() {
                     </td>
                     <td className="px-4 py-3 font-medium">{Number(trip.actualVolume || trip.expectedVolume || 0).toLocaleString('vi-VN')}</td>
                     <td className="px-4 py-3 hidden xl:table-cell text-slate-500 text-xs">{trip.dumpLocation?.name || '-'}</td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex justify-center gap-1">
+                        {trip.checkInPhotoUrl && (
+                          <button onClick={() => setViewImage(trip.checkInPhotoUrl)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="Ảnh vào">
+                            <Camera className="w-4 h-4" />
+                          </button>
+                        )}
+                        {trip.checkOutPhotoUrl && (
+                          <button onClick={() => setViewImage(trip.checkOutPhotoUrl)} className="p-1 text-amber-600 hover:bg-amber-50 rounded transition-colors" title="Ảnh ra">
+                            <Camera className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 hidden md:table-cell text-xs text-slate-500">
                       {trip.checkInAt ? new Date(trip.checkInAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-'}
                     </td>
@@ -147,6 +163,18 @@ export default function TripsPage() {
           </div>
         )}
       </div>
+
+      {viewImage && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4" onClick={() => setViewImage(null)}>
+          <div className="relative max-w-4xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setViewImage(null)} className="absolute -top-12 right-0 p-2 text-white hover:text-slate-300 transition-colors">
+              <X className="w-8 h-8" />
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={viewImage} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" alt="Ảnh chuyến xe" />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
