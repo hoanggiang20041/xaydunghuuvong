@@ -294,7 +294,7 @@ export default function QuickActionPage() {
               <select 
                 value={selectedMaterial} 
                 onChange={e => setSelectedMaterial(e.target.value)}
-                className="w-full px-4 py-4 text-lg bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none"
+                className="w-full px-4 py-4 text-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none"
               >
                 <option value="">-- Chọn vật liệu --</option>
                 {materials.map(m => (
@@ -320,7 +320,7 @@ export default function QuickActionPage() {
             )}
             
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Số khối dự kiến (m³)</label>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Số khối (m³)</label>
               <input 
                 type="number" 
                 step="0.1"

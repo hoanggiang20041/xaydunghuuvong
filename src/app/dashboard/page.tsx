@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/use-auth'
 import Link from 'next/link'
 import {
   Truck, TrendingUp, ArrowDownToLine, ArrowUpFromLine, MapPin,
-  Package, Clock, Loader2, RefreshCw, AlertCircle, Sun, Cloud, CloudRain, Search, X
+  Package, Clock, Loader2, RefreshCw, AlertCircle, Sun, Cloud, CloudRain, Search, X, Moon
 } from 'lucide-react'
 import { toast } from '@/components/ui/toaster'
 
@@ -37,7 +37,12 @@ export default function DashboardPage() {
         const w = d.current_weather
         if (w) {
           let icon = <Sun className="w-6 h-6 text-yellow-500" />
-          let desc = "Trời nắng"
+          let desc = w.is_day === 0 ? "Trời quang mây" : "Trời nắng"
+          
+          if (w.is_day === 0) {
+            icon = <Moon className="w-6 h-6 text-slate-300" />
+          }
+          
           if (w.weathercode >= 51 && w.weathercode <= 67) { icon = <CloudRain className="w-6 h-6 text-blue-400" />; desc = "Có mưa" }
           else if (w.weathercode >= 1 && w.weathercode <= 3) { icon = <Cloud className="w-6 h-6 text-slate-400" />; desc = "Nhiều mây" }
           else if (w.weathercode >= 71) { icon = <CloudRain className="w-6 h-6 text-blue-600" />; desc = "Mưa lớn" }
