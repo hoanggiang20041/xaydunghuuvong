@@ -128,14 +128,13 @@ export default function QuickActionPage() {
         toast({ title: '✅ XE VÀO THÀNH CÔNG', variant: 'success' })
       } else {
         if (!activeTrip) throw new Error('Vui lòng chọn chuyến xe đang ở trong công trình')
-        if (!actualVolume) throw new Error('Vui lòng nhập số khối thực tế (m³)')
 
         const res = await fetch(`/api/trips/${activeTrip.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             action: 'checkout',
-            actualVolume: parseFloat(actualVolume),
+            actualVolume: actualVolume ? parseFloat(actualVolume) : null,
             checkOutPhotoUrl: photo
           })
         })
@@ -357,15 +356,14 @@ export default function QuickActionPage() {
               <span className="font-medium text-slate-900 dark:text-white">{activeTrip.material?.name}</span>
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Số khối (m³) thực tế *</label>
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Số khối (m³) thực tế</label>
               <input 
                 type="number" 
-                required
                 step="0.1"
                 min="0"
                 value={actualVolume}
                 onChange={e => setActualVolume(e.target.value)}
-                placeholder="Ví dụ: 15.5"
+                placeholder="Ví dụ: 15.5 (không bắt buộc)"
                 className="w-full px-4 py-4 text-xl font-bold bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-blue-300 dark:border-blue-700 rounded-xl focus:border-blue-500 focus:outline-none"
               />
             </div>

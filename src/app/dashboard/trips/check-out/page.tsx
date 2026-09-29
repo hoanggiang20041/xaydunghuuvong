@@ -222,13 +222,12 @@ export default function CheckOutPage() {
             </label>
             <input
               type="number"
-              required
               step="0.1"
               min="0"
               value={actualVolume}
               onChange={(e) => setActualVolume(e.target.value)}
               className="w-full px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-xl text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition"
-              placeholder="Nhập số khối thực tế"
+              placeholder="Nhập số khối (không bắt buộc)"
             />
           </div>
 
