@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from '@/components/ui/toaster'
 import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '@/lib/constants'
-import { Route, Search, Filter, Loader2, Eye, Clock, Camera, X, Edit2, Trash2 } from 'lucide-react'
+import { Route, Search, Filter, Loader2, Eye, Clock, Camera, X, Edit2, Trash2, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { Modal } from '@/components/ui/modal'
 
@@ -160,8 +160,8 @@ export default function TripsPage() {
         </div>
         <div className="flex items-center gap-2">
           {hasPermission('trips.check_in') && (
-            <Link href="/dashboard/trips/check-in" className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition">
-              + Xe vào
+            <Link href="/dashboard/quick-action" className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition flex items-center gap-1">
+              <Zap className="w-4 h-4" /> Thao tác nhanh
             </Link>
           )}
         </div>
@@ -215,8 +215,8 @@ export default function TripsPage() {
                   <th className="px-4 py-3">m³</th>
                   <th className="px-4 py-3 hidden xl:table-cell">Điểm đổ</th>
                   <th className="px-4 py-3 text-center">Ảnh</th>
-                  <th className="px-4 py-3 hidden md:table-cell">Giờ vào</th>
-                  <th className="px-4 py-3 hidden lg:table-cell">Giờ ra</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Giờ vào</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Giờ ra</th>
                   <th className="px-4 py-3">Trạng thái</th>
                   <th className="px-4 py-3 text-right">Thao tác</th>
                 </tr>
@@ -250,10 +250,10 @@ export default function TripsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 hidden md:table-cell text-xs text-slate-500">
+                    <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
                       {trip.checkInAt ? new Date(trip.checkInAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell text-xs text-slate-500">
+                    <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">
                       {trip.checkOutAt ? new Date(trip.checkOutAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                     </td>
                     <td className="px-4 py-3">
