@@ -45,3 +45,5 @@ prisma/migrations/migration_lock.toml
 # agents
 .agents/
 AGENTS.md
+
+.vercel
