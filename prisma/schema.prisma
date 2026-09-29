@@ -1,0 +1,523 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum ProjectStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CLOSED
+}
+
+enum EntityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TripStatus {
+  CREATED
+  CHECKED_IN
+  IN_PROGRESS
+  CHECKED_OUT
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum EditRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ==========================================
+// AUTH & USER MANAGEMENT
+// ==========================================
+
+model User {
+  id                String    @id @default(uuid())
+  username          String    @unique @db.VarChar(50)
+  email             String    @unique @db.VarChar(255)
+  passwordHash      String    @map("password_hash") @db.VarChar(255)
+  fullName          String    @map("full_name") @db.VarChar(100)
+  phone             String?   @db.VarChar(20)
+  isActive          Boolean   @default(true) @map("is_active")
+  isLocked          Boolean   @default(false) @map("is_locked")
+  lockedUntil       DateTime? @map("locked_until")
+  failedLoginCount  Int       @default(0) @map("failed_login_count")
+  twoFactorEnabled  Boolean   @default(false) @map("two_factor_enabled")
+  twoFactorSecret   String?   @map("two_factor_secret") @db.VarChar(255)
+  backupCodes       String?   @map("backup_codes") @db.Text
+  lastLoginAt       DateTime? @map("last_login_at")
+  passwordChangedAt DateTime? @map("password_changed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  createdById       String?   @map("created_by_id")
+  deletedAt         DateTime? @map("deleted_at")
+
+  // Relations
+  createdBy         User?     @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers      User[]    @relation("UserCreatedBy")
+
+  userRoles         UserRole[]
+  userProjects      UserProject[]
+  sessions          Session[]
+  loginAttempts     LoginAttempt[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+
+  // Trips relations
+  createdTrips      Trip[]    @relation("TripCreatedBy")
+  checkedOutTrips   Trip[]    @relation("TripCheckedOutBy")
+  confirmedTrips    Trip[]    @relation("TripConfirmedBy")
+
+  // Trip events
+  tripEvents        TripEvent[]
+
+  // Edit requests
+  requestedEdits    TripEditRequest[] @relation("EditRequestedBy")
+  reviewedEdits     TripEditRequest[] @relation("EditReviewedBy")
+
+  // Attachments
+  uploadedAttachments Attachment[]
+
+  // Managed projects
+  managedProjects   Project[] @relation("ProjectManager")
+
+  // Created entities
+  createdProjects   Project[] @relation("ProjectCreatedBy")
+  createdVehicles   Vehicle[] @relation("VehicleCreatedBy")
+  createdDrivers    Driver[]  @relation("DriverCreatedBy")
+  createdPickups    PickupLocation[] @relation("PickupCreatedBy")
+  createdDumps      DumpLocation[]   @relation("DumpCreatedBy")
+
+  // Assigned roles/projects
+  assignedUserRoles    UserRole[]    @relation("RoleAssignedBy")
+  assignedUserProjects UserProject[] @relation("ProjectAssignedBy")
+
+  // System settings
+  updatedSettings   SystemSetting[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique @db.VarChar(50)
+  displayName String   @map("display_name") @db.VarChar(100)
+  description String?  @db.Text
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String @id @default(uuid())
+  code        String @unique @db.VarChar(100)
+  module      String @db.VarChar(50)
+  action      String @db.VarChar(50)
+  description String? @db.Text
+
+  // Relations
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId     String   @map("user_id")
+  roleId     String   @map("role_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  assignedBy String?  @map("assigned_by")
+
+  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assigner   User? @relation("RoleAssignedBy", fields: [assignedBy], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model UserProject {
+  userId     String   @map("user_id")
+  projectId  String   @map("project_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  assignedBy String?  @map("assigned_by")
+
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assigner User?   @relation("ProjectAssignedBy", fields: [assignedBy], references: [id])
+
+  @@id([userId, projectId])
+  @@map("user_projects")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @map("token_hash") @db.VarChar(255)
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.Text
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+  @@map("sessions")
+}
+
+model LoginAttempt {
+  id            String   @id @default(uuid())
+  username      String   @db.VarChar(50)
+  ipAddress     String?  @map("ip_address") @db.VarChar(45)
+  success       Boolean
+  failureReason String?  @map("failure_reason") @db.VarChar(100)
+  userId        String?  @map("user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([username])
+  @@index([ipAddress])
+  @@index([createdAt])
+  @@map("login_attempts")
+}
+
+// ==========================================
+// BUSINESS ENTITIES
+// ==========================================
+
+model Project {
+  id        String        @id @default(uuid())
+  code      String        @unique @db.VarChar(50)
+  name      String        @db.VarChar(200)
+  address   String?       @db.Text
+  investor  String?       @db.VarChar(200)
+  managerId String?       @map("manager_id")
+  startDate DateTime?     @map("start_date") @db.Date
+  endDate   DateTime?     @map("end_date") @db.Date
+  status    ProjectStatus @default(ACTIVE)
+  notes     String?       @db.Text
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  createdById String?     @map("created_by_id")
+  deletedAt DateTime?     @map("deleted_at")
+
+  // Relations
+  manager      User?         @relation("ProjectManager", fields: [managerId], references: [id])
+  createdBy    User?         @relation("ProjectCreatedBy", fields: [createdById], references: [id])
+  userProjects UserProject[]
+  trips        Trip[]
+
+  @@index([status])
+  @@index([code])
+  @@map("projects")
+}
+
+model Vehicle {
+  id              String       @id @default(uuid())
+  plateNumber     String       @unique @map("plate_number") @db.VarChar(20)
+  vehicleType     String?      @map("vehicle_type") @db.VarChar(50)
+  capacity        Decimal?     @db.Decimal(10, 2)
+  volumeCapacity  Decimal?     @map("volume_capacity") @db.Decimal(10, 2)
+  ownerName       String?      @map("owner_name") @db.VarChar(100)
+  defaultDriverId String?      @map("default_driver_id")
+  phone           String?      @db.VarChar(20)
+  status          EntityStatus @default(ACTIVE)
+  notes           String?      @db.Text
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  createdById     String?      @map("created_by_id")
+  deletedAt       DateTime?    @map("deleted_at")
+
+  // Relations
+  defaultDriver Driver? @relation("DefaultDriver", fields: [defaultDriverId], references: [id])
+  createdBy     User?   @relation("VehicleCreatedBy", fields: [createdById], references: [id])
+  trips         Trip[]
+
+  @@index([plateNumber])
+  @@index([status])
+  @@map("vehicles")
+}
+
+model Driver {
+  id        String       @id @default(uuid())
+  fullName  String       @map("full_name") @db.VarChar(100)
+  phone     String?      @db.VarChar(20)
+  idNumber  String?      @map("id_number") @db.VarChar(20)
+  company   String?      @db.VarChar(100)
+  status    EntityStatus @default(ACTIVE)
+  notes     String?      @db.Text
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  createdById String?    @map("created_by_id")
+  deletedAt DateTime?    @map("deleted_at")
+
+  // Relations
+  createdBy       User?     @relation("DriverCreatedBy", fields: [createdById], references: [id])
+  defaultVehicles Vehicle[] @relation("DefaultDriver")
+  trips           Trip[]
+
+  @@index([fullName])
+  @@index([status])
+  @@map("drivers")
+}
+
+model Material {
+  id        String       @id @default(uuid())
+  code      String       @unique @db.VarChar(20)
+  name      String       @db.VarChar(100)
+  unit      String       @default("m³") @db.VarChar(20)
+  status    EntityStatus @default(ACTIVE)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  trips Trip[]
+
+  @@map("materials")
+}
+
+model PickupLocation {
+  id            String       @id @default(uuid())
+  name          String       @db.VarChar(200)
+  address       String?      @db.Text
+  contactPerson String?      @map("contact_person") @db.VarChar(100)
+  phone         String?      @db.VarChar(20)
+  status        EntityStatus @default(ACTIVE)
+  notes         String?      @db.Text
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  createdById   String?      @map("created_by_id")
+  deletedAt     DateTime?    @map("deleted_at")
+
+  // Relations
+  createdBy User? @relation("PickupCreatedBy", fields: [createdById], references: [id])
+  trips     Trip[]
+
+  @@map("pickup_locations")
+}
+
+model DumpLocation {
+  id            String       @id @default(uuid())
+  name          String       @db.VarChar(200)
+  address       String?      @db.Text
+  contactPerson String?      @map("contact_person") @db.VarChar(100)
+  phone         String?      @db.VarChar(20)
+  status        EntityStatus @default(ACTIVE)
+  notes         String?      @db.Text
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  createdById   String?      @map("created_by_id")
+  deletedAt     DateTime?    @map("deleted_at")
+
+  // Relations
+  createdBy User? @relation("DumpCreatedBy", fields: [createdById], references: [id])
+  trips     Trip[]
+
+  @@map("dump_locations")
+}
+
+// ==========================================
+// TRIP MANAGEMENT (CORE)
+// ==========================================
+
+model Trip {
+  id               String     @id @default(uuid())
+  tripCode         String     @unique @map("trip_code") @db.VarChar(30)
+  projectId        String     @map("project_id")
+  vehicleId        String     @map("vehicle_id")
+  driverId         String     @map("driver_id")
+  materialId       String     @map("material_id")
+  pickupLocationId String?    @map("pickup_location_id")
+  dumpLocationId   String?    @map("dump_location_id")
+  expectedVolume   Decimal?   @map("expected_volume") @db.Decimal(10, 2)
+  actualVolume     Decimal?   @map("actual_volume") @db.Decimal(10, 2)
+  checkInAt        DateTime?  @map("check_in_at")
+  checkOutAt       DateTime?  @map("check_out_at")
+  status           TripStatus @default(CHECKED_IN)
+  notes            String?    @db.Text
+  createdById      String     @map("created_by_id")
+  checkedOutById   String?    @map("checked_out_by_id")
+  confirmedById    String?    @map("confirmed_by_id")
+  version          Int        @default(1)
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  deletedAt        DateTime?  @map("deleted_at")
+
+  // Relations
+  project        Project         @relation(fields: [projectId], references: [id])
+  vehicle        Vehicle         @relation(fields: [vehicleId], references: [id])
+  driver         Driver          @relation(fields: [driverId], references: [id])
+  material       Material        @relation(fields: [materialId], references: [id])
+  pickupLocation PickupLocation? @relation(fields: [pickupLocationId], references: [id])
+  dumpLocation   DumpLocation?   @relation(fields: [dumpLocationId], references: [id])
+  createdBy      User            @relation("TripCreatedBy", fields: [createdById], references: [id])
+  checkedOutBy   User?           @relation("TripCheckedOutBy", fields: [checkedOutById], references: [id])
+  confirmedBy    User?           @relation("TripConfirmedBy", fields: [confirmedById], references: [id])
+
+  events       TripEvent[]
+  editRequests TripEditRequest[]
+  attachments  Attachment[]
+
+  @@index([projectId])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@index([materialId])
+  @@index([status])
+  @@index([checkInAt])
+  @@index([tripCode])
+  @@index([createdAt])
+  @@index([projectId, status])
+  @@index([vehicleId, status])
+  @@map("trips")
+}
+
+model TripEvent {
+  id          String   @id @default(uuid())
+  tripId      String   @map("trip_id")
+  eventType   String   @map("event_type") @db.VarChar(50)
+  oldStatus   String?  @map("old_status") @db.VarChar(30)
+  newStatus   String?  @map("new_status") @db.VarChar(30)
+  performedById String @map("performed_by_id")
+  notes       String?  @db.Text
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  trip        Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  performedBy User @relation(fields: [performedById], references: [id])
+
+  @@index([tripId])
+  @@index([createdAt])
+  @@map("trip_events")
+}
+
+model TripEditRequest {
+  id           String            @id @default(uuid())
+  tripId       String            @map("trip_id")
+  fieldName    String            @map("field_name") @db.VarChar(50)
+  oldValue     String?           @map("old_value") @db.Text
+  newValue     String?           @map("new_value") @db.Text
+  reason       String            @db.Text
+  status       EditRequestStatus @default(PENDING)
+  requestedById String           @map("requested_by_id")
+  reviewedById  String?          @map("reviewed_by_id")
+  reviewedAt    DateTime?        @map("reviewed_at")
+  reviewNotes   String?          @map("review_notes") @db.Text
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  trip        Trip  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  requestedBy User  @relation("EditRequestedBy", fields: [requestedById], references: [id])
+  reviewedBy  User? @relation("EditReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([tripId])
+  @@index([status])
+  @@map("trip_edit_requests")
+}
+
+// ==========================================
+// SYSTEM
+// ==========================================
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  username  String   @db.VarChar(50)
+  action    String   @db.VarChar(50)
+  module    String   @db.VarChar(50)
+  recordId  String?  @map("record_id") @db.VarChar(50)
+  oldValues Json?    @map("old_values")
+  newValues Json?    @map("new_values")
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.Text
+  result    String   @default("SUCCESS") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([module])
+  @@index([action])
+  @@index([recordId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Attachment {
+  id         String    @id @default(uuid())
+  entityType String    @map("entity_type") @db.VarChar(50)
+  entityId   String    @map("entity_id")
+  fileName   String    @map("file_name") @db.VarChar(255)
+  storageKey String    @map("storage_key") @db.VarChar(500)
+  mimeType   String    @map("mime_type") @db.VarChar(100)
+  fileSize   BigInt    @map("file_size")
+  uploadedById String  @map("uploaded_by_id")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  deletedAt  DateTime? @map("deleted_at")
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
+  trip       Trip? @relation(fields: [entityId], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("attachments")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String   @db.VarChar(200)
+  message   String   @db.Text
+  type      String   @db.VarChar(50)
+  isRead    Boolean  @default(false) @map("is_read")
+  link      String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique @db.VarChar(100)
+  value     String   @db.Text
+  updatedById String? @map("updated_by_id")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  updatedBy User? @relation(fields: [updatedById], references: [id])
+
+  @@map("system_settings")
+}

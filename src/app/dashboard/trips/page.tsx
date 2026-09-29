@@ -1,0 +1,152 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '@/hooks/use-auth'
+import { toast } from '@/components/ui/toaster'
+import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '@/lib/constants'
+import { Route, Search, Filter, Loader2, Eye, Clock } from 'lucide-react'
+import Link from 'next/link'
+
+export default function TripsPage() {
+  const { hasPermission } = useAuth()
+  const [trips, setTrips] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
+
+  const fetchTrips = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ page: page.toString(), pageSize: '20' })
+      if (search) params.set('search', search)
+      if (status) params.set('status', status)
+
+      const res = await fetch(`/api/trips?${params}`)
+      const data = await res.json()
+      if (data.success) {
+        setTrips(data.data || [])
+        setTotalPages(data.meta?.totalPages || 1)
+        setTotal(data.meta?.total || 0)
+      }
+    } catch {
+      toast({ title: 'Lỗi tải dữ liệu', variant: 'error' })
+    } finally {
+      setLoading(false)
+    }
+  }, [search, status, page])
+
+  useEffect(() => { fetchTrips() }, [fetchTrips])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Route className="w-5 h-5 text-amber-500" />
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Chuyến xe</h1>
+          <span className="text-sm text-slate-400">({total})</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {hasPermission('trips.check_in') && (
+            <Link href="/dashboard/trips/check-in" className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition">
+              + Xe vào
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+            placeholder="Tìm biển số, tài xế, mã chuyến..."
+            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition"
+          />
+        </div>
+        <select
+          value={status}
+          onChange={(e) => { setStatus(e.target.value); setPage(1) }}
+          className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+        >
+          <option value="">Tất cả trạng thái</option>
+          {Object.entries(TRIP_STATUS_LABELS).map(([key, label]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+        ) : trips.length === 0 ? (
+          <div className="text-center py-12 text-slate-500"><p>Không có dữ liệu</p></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-800/50">
+                <tr className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <th className="px-4 py-3">Mã chuyến</th>
+                  <th className="px-4 py-3">Biển số</th>
+                  <th className="px-4 py-3 hidden md:table-cell">Tài xế</th>
+                  <th className="px-4 py-3 hidden lg:table-cell">Vật liệu</th>
+                  <th className="px-4 py-3">m³</th>
+                  <th className="px-4 py-3 hidden xl:table-cell">Điểm đổ</th>
+                  <th className="px-4 py-3 hidden md:table-cell">Giờ vào</th>
+                  <th className="px-4 py-3 hidden lg:table-cell">Giờ ra</th>
+                  <th className="px-4 py-3">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {trips.map((trip: any) => (
+                  <tr key={trip.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs text-slate-600 dark:text-slate-300">{trip.tripCode}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-mono font-semibold text-slate-900 dark:text-white">{trip.vehicle?.plateNumber}</span>
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell text-slate-600 dark:text-slate-300">{trip.driver?.fullName}</td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      <span className="inline-flex px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs">{trip.material?.name}</span>
+                    </td>
+                    <td className="px-4 py-3 font-medium">{Number(trip.actualVolume || trip.expectedVolume || 0).toLocaleString('vi-VN')}</td>
+                    <td className="px-4 py-3 hidden xl:table-cell text-slate-500 text-xs">{trip.dumpLocation?.name || '-'}</td>
+                    <td className="px-4 py-3 hidden md:table-cell text-xs text-slate-500">
+                      {trip.checkInAt ? new Date(trip.checkInAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-'}
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell text-xs text-slate-500">
+                      {trip.checkOutAt ? new Date(trip.checkOutAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${TRIP_STATUS_COLORS[trip.status] || ''}`}>
+                        {TRIP_STATUS_LABELS[trip.status] || trip.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-800">
+            <p className="text-xs text-slate-500">Trang {page}/{totalPages} · {total} kết quả</p>
+            <div className="flex gap-1">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="px-3 py-1 border border-slate-200 dark:border-slate-700 rounded text-xs disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-800 transition">←</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1 border border-slate-200 dark:border-slate-700 rounded text-xs disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-800 transition">→</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
