@@ -11,8 +11,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Quản lý Vận chuyển - Hệ thống quản lý xe công trình",
-  description: "Hệ thống quản lý xe vận chuyển vật liệu công trình. Theo dõi xe ra/vào, khối lượng vật liệu, báo cáo chi tiết.",
+  title: "Công Ty TNHH Hữu Vọng - Quản lý Vận chuyển Công trình",
+  description: "Hệ thống quản lý xe vận chuyển vật liệu công trình của Công Ty TNHH Hữu Vọng. Theo dõi xe ra/vào, khối lượng vật liệu, báo cáo chi tiết.",
 }
 
 export default function RootLayout({

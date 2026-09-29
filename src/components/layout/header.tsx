@@ -28,10 +28,10 @@ export function Header() {
       <div className="flex items-center gap-3 pl-10 lg:pl-0">
         <div>
           <h1 className="text-sm font-bold tracking-wide hidden sm:block" style={{ color: 'var(--primary)' }}>
-            HỆ THỐNG QUẢN LÝ VẬN CHUYỂN CÔNG TRÌNH
+            CÔNG TY TNHH HỮU VỌNG — Quản lý Vận chuyển
           </h1>
           <h1 className="text-xs font-bold tracking-wide sm:hidden" style={{ color: 'var(--primary)' }}>
-            QL VẬN CHUYỂN CT
+            HỮU VỌNG — QL Vận chuyển
           </h1>
         </div>
       </div>

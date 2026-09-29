@@ -50,13 +50,13 @@ export function AppSidebar() {
       {/* Header */}
       <div className="px-4 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0" style={{ background: '#d69e2e' }}>
-            <Building2 className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0 shadow" style={{ background: 'linear-gradient(135deg, #d69e2e 0%, #ecc94b 100%)' }}>
+            <span className="text-sm font-black" style={{ color: '#1a365d', fontFamily: 'Georgia, serif' }}>HV</span>
           </div>
           {!collapsed && (
             <div>
-              <div className="text-xs font-bold text-white tracking-wider">QUẢN LÝ VẬN CHUYỂN</div>
-              <div className="text-[10px] font-medium" style={{ color: '#d69e2e' }}>CÔNG TRÌNH XÂY DỰNG</div>
+              <div className="text-xs font-bold text-white tracking-wider">HỮU VỌNG</div>
+              <div className="text-[10px] font-medium" style={{ color: '#d69e2e' }}>Quản lý Vận chuyển</div>
             </div>
           )}
         </div>
