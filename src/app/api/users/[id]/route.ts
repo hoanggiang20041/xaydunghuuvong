@@ -52,6 +52,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     const body = await request.json()
+    
+    // Handle unlock action
+    if (body.action === 'unlock') {
+      if (!user.isSuperAdmin) return forbiddenResponse('Chỉ Super Admin mới có quyền mở khóa')
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: { isLocked: false, failedLoginCount: 0, lockedUntil: null }
+      })
+      await auditAction(user, 'UPDATE', 'users', id, { isLocked: targetUser.isLocked }, { isLocked: false })
+      return successResponse(updatedUser)
+    }
+
     const parsed = updateUserSchema.safeParse(body)
     if (!parsed.success) return validationErrorResponse(parsed.error.issues[0].message)
 

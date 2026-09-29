@@ -115,10 +115,34 @@ export async function POST(request: NextRequest) {
       return forbiddenResponse('Bạn không có quyền truy cập công trình này')
     }
 
+    // Resolve vehicleId
+    let vehicleId = data.vehicleId;
+    if (!vehicleId && data.plateNumber) {
+      const plateUpper = data.plateNumber.toUpperCase().replace(/\s+/g, '');
+      let vehicle = await prisma.vehicle.findUnique({
+        where: { plateNumber: plateUpper }
+      });
+      if (!vehicle) {
+        vehicle = await prisma.vehicle.create({
+          data: {
+            plateNumber: plateUpper,
+            vehicleType: 'Khác',
+            createdById: user.id
+          }
+        });
+        await auditAction(user, 'CREATE', 'vehicles', vehicle.id, null, { plateNumber: plateUpper });
+      }
+      vehicleId = vehicle.id;
+    }
+
+    if (!vehicleId) {
+      return validationErrorResponse('Không xác định được xe');
+    }
+
     // Check if vehicle has an open trip
     const openTrip = await prisma.trip.findFirst({
       where: {
-        vehicleId: data.vehicleId,
+        vehicleId: vehicleId,
         status: { in: ['CHECKED_IN', 'IN_PROGRESS'] },
         deletedAt: null,
       },
@@ -148,7 +172,7 @@ export async function POST(request: NextRequest) {
         data: {
           tripCode,
           projectId: data.projectId,
-          vehicleId: data.vehicleId,
+          vehicleId: vehicleId,
           driverId: data.driverId,
           materialId: data.materialId,
           pickupLocationId: data.pickupLocationId,
@@ -188,7 +212,7 @@ export async function POST(request: NextRequest) {
     // Audit log (outside transaction to not block)
     await auditAction(user, 'CREATE', 'trips', trip.id, null, {
       tripCode: trip.tripCode,
-      vehicleId: data.vehicleId,
+      vehicleId: vehicleId,
       driverId: data.driverId,
       materialId: data.materialId,
       expectedVolume: data.expectedVolume,

@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
     
     if (!passwordValid) {
       const failedCount = user.failedLoginCount + 1
-      const maxAttempts = parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '5')
-      const lockoutMinutes = parseInt(process.env.LOGIN_LOCKOUT_MINUTES || '15')
+      const maxAttempts = parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '10')
+      const lockoutMinutes = parseInt(process.env.LOGIN_LOCKOUT_MINUTES || '30')
 
       const updateData: Record<string, unknown> = { failedLoginCount: failedCount }
       

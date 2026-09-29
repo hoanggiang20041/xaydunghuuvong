@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from '@/components/ui/toaster'
-import { UserCog, Search, Loader2, Plus, Edit2, Trash2 } from 'lucide-react'
+import { UserCog, Search, Loader2, Plus, Edit2, Trash2, Key } from 'lucide-react'
 import { ROLE_LABELS } from '@/lib/constants'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -92,6 +92,23 @@ export default function UsersPage() {
     }
   }
 
+  const handleUnlock = async (id: string) => {
+    if (!confirm('Bạn có chắc chắn muốn mở khóa tài khoản này?')) return
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unlock' })
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error?.message || data.message || 'Lỗi không xác định')
+      toast({ title: 'Đã mở khóa tài khoản', variant: 'success' })
+      fetchUsers()
+    } catch (err: any) {
+      toast({ title: 'Lỗi', description: err.message, variant: 'error' })
+    }
+  }
+
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return
     if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} người dùng đã chọn?`)) return
@@ -150,8 +167,19 @@ export default function UsersPage() {
                 <td className="px-4 py-3 font-medium">{u.fullName}</td>
                 <td className="px-4 py-3 hidden md:table-cell text-slate-500 text-xs">{u.email}</td>
                 <td className="px-4 py-3">{u.userRoles?.map((ur: any) => <span key={ur.role.name} className="inline-flex mr-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">{ROLE_LABELS[ur.role.name] || ur.role.displayName}</span>)}</td>
-                <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800'}`}>{u.isActive ? 'Hoạt động' : 'Khóa'}</span></td>
+                <td className="px-4 py-3">
+                  {u.isLocked ? (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Khóa (Sai MK)</span>
+                  ) : (
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800'}`}>{u.isActive ? 'Hoạt động' : 'Vô hiệu hóa'}</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 flex justify-end gap-2">
+                  {u.isLocked && (
+                    <button onClick={() => handleUnlock(u.id)} className="p-1 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors" title="Mở khóa tài khoản">
+                      <Key className="w-4 h-4" />
+                    </button>
+                  )}
                   <button onClick={() => handleOpenEdit(u)} className="p-1 text-slate-400 hover:text-blue-600 transition-colors"><Edit2 className="w-4 h-4" /></button>
                   <button onClick={() => setDeleteId(u.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
                 </td>

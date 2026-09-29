@@ -39,23 +39,20 @@ export default function QuickActionPage() {
     })
   }, [])
 
-  // Search for active trips when in checkout mode
+  const [onsiteTrips, setOnsiteTrips] = useState<any[]>([])
+
+  // Fetch active trips when in checkout mode
   useEffect(() => {
-    if (mode === 'checkout' && plateNumber.length > 2) {
-      const delay = setTimeout(() => {
-        fetch(`/api/trips/onsite?search=${plateNumber}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.success && data.data.length > 0) {
-              setSuggestions(data.data)
-            } else {
-              setSuggestions([])
-            }
-          })
-      }, 500)
-      return () => clearTimeout(delay)
+    if (mode === 'checkout') {
+      fetch(`/api/trips/onsite`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setOnsiteTrips(data.data || [])
+          }
+        })
     }
-  }, [plateNumber, mode])
+  }, [mode])
 
   // Search vehicles for checkin
   useEffect(() => {
@@ -112,21 +109,8 @@ export default function QuickActionPage() {
         if (!selectedMaterial) throw new Error('Vui lòng chọn loại vật liệu')
         if (!selectedProject) throw new Error('Vui lòng chọn công trình')
 
-        // First find or create vehicle
-        let vId = suggestions.find(s => s.plateNumber === plateNumber)?.id
-        if (!vId) {
-          const vRes = await fetch('/api/vehicles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ plateNumber, type: 'OTHER', status: 'ACTIVE' })
-          })
-          const vData = await vRes.json()
-          if (!vData.success) throw new Error(vData.message || 'Lỗi tạo xe mới')
-          vId = vData.data.id
-        }
-
         const payload = {
-          vehicleId: vId,
+          plateNumber: plateNumber,
           projectId: selectedProject,
           materialId: selectedMaterial,
           expectedVolume: expectedVolume ? parseFloat(expectedVolume) : null,
@@ -254,34 +238,55 @@ export default function QuickActionPage() {
 
         {/* Plate Number */}
         <div>
-          <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Biển số xe *</label>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
-            <input 
-              type="text" 
-              required
-              value={plateNumber}
-              onChange={e => setPlateNumber(e.target.value.toUpperCase())}
-              placeholder="VD: 51C-123.45"
-              className="w-full pl-12 pr-4 py-4 text-xl font-bold bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none uppercase"
-            />
-          </div>
+          <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+            {mode === 'checkout' ? 'Chọn xe đang ở công trình *' : 'Biển số xe *'}
+          </label>
           
-          {/* Suggestions */}
-          {suggestions.length > 0 && !activeTrip && (
+          {mode === 'checkout' ? (
+            <select
+              required
+              value={activeTrip?.id || ''}
+              onChange={e => {
+                const trip = onsiteTrips.find(t => t.id === e.target.value)
+                setActiveTrip(trip || null)
+                if (trip) setPlateNumber(trip.vehicle?.plateNumber || '')
+              }}
+              className="w-full px-4 py-4 text-xl font-bold bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none"
+            >
+              <option value="">-- Chọn xe --</option>
+              {onsiteTrips.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.vehicle?.plateNumber} - {t.driver?.fullName || 'Khách'}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
+              <input 
+                type="text" 
+                required
+                value={plateNumber}
+                onChange={e => setPlateNumber(e.target.value.toUpperCase())}
+                placeholder="VD: 51C-123.45"
+                className="w-full pl-12 pr-4 py-4 text-xl font-bold bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 focus:outline-none uppercase"
+              />
+            </div>
+          )}
+          
+          {/* Suggestions for Check In */}
+          {mode === 'checkin' && suggestions.length > 0 && !activeTrip && (
             <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800 shadow-sm">
               {suggestions.map(s => (
                 <div 
                   key={s.id} 
-                  className="px-4 py-3 border-b last:border-0 border-slate-100 dark:border-slate-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer flex justify-between items-center"
+                  className="px-4 py-3 border-b last:border-0 border-slate-100 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer flex justify-between items-center"
                   onClick={() => {
                     setPlateNumber(s.plateNumber || s.vehicle?.plateNumber)
                     setSuggestions([])
-                    if (mode === 'checkout') setActiveTrip(s)
                   }}
                 >
                   <span className="font-bold text-lg">{s.plateNumber || s.vehicle?.plateNumber}</span>
-                  {mode === 'checkout' && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Đang ở CT</span>}
                 </div>
               ))}
             </div>

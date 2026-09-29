@@ -132,7 +132,8 @@ export const updateLocationSchema = createLocationSchema.partial()
 
 export const createTripSchema = z.object({
   projectId: z.string().uuid('Vui lòng chọn công trình'),
-  vehicleId: z.string().uuid('Vui lòng chọn xe'),
+  vehicleId: z.string().uuid().optional().nullable(),
+  plateNumber: z.string().min(1, 'Vui lòng nhập biển số').optional().nullable(),
   driverId: z.string().uuid().optional().nullable(),
   materialId: z.string().uuid('Vui lòng chọn vật liệu'),
   pickupLocationId: z.string().uuid().optional().nullable(),
@@ -140,6 +141,9 @@ export const createTripSchema = z.object({
   expectedVolume: z.number().positive('Số khối phải lớn hơn 0').optional().nullable(),
   checkInPhotoUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+}).refine(data => data.vehicleId || data.plateNumber, {
+  message: "Vui lòng chọn xe hoặc nhập biển số",
+  path: ["plateNumber"],
 })
 
 export const checkOutTripSchema = z.object({

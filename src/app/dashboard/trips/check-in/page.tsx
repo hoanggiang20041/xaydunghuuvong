@@ -135,6 +135,7 @@ export default function CheckInPage() {
     try {
       const payload = {
         vehicleId: selectedVehicle?.id,
+        plateNumber: plateNumber, // Fallback if vehicle doesn't exist
         projectId: formData.projectId,
         driverId: formData.driverId || null,
         materialId: formData.materialId,
@@ -277,6 +278,11 @@ export default function CheckInPage() {
           </div>
 
           {/* Search results dropdown */}
+          {plateNumber.length >= 2 && searchResults.length === 0 && !searching && (
+            <div className="mt-1 text-sm text-emerald-600 dark:text-emerald-400">
+              * Xe chưa có trong hệ thống. Cứ tiếp tục lưu, hệ thống sẽ tự động tạo mới.
+            </div>
+          )}
           {searchResults.length > 0 && !selectedVehicle && (
             <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
               {searchResults.map((v: any) => (
