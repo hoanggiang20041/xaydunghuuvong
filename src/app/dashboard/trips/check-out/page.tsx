@@ -170,6 +170,16 @@ export default function CheckOutPage() {
             <InfoRow label="Công trình" value={selectedTrip.project?.name || 'N/A'} />
           </div>
 
+          {selectedTrip.checkInPhotoUrl && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Ảnh lúc vào</label>
+              <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-black aspect-video flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={selectedTrip.checkInPhotoUrl} alt="Ảnh lúc vào" className="max-w-full max-h-full object-contain" />
+              </div>
+            </div>
+          )}
+
           <hr className="border-slate-100 dark:border-slate-800" />
 
           {/* Photo Capture */}

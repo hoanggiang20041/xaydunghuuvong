@@ -256,6 +256,21 @@ export default function TripsPage() {
       {/* Edit Modal */}
       <Modal isOpen={!!editTrip} onClose={() => !submitting && setEditTrip(null)} title={`Bổ sung thông tin: ${editTrip?.tripCode}`}>
         <form onSubmit={handleUpdateTrip} className="space-y-4">
+          
+          {/* Display Check-in Photo if available to help identify the trip */}
+          {editTrip?.checkInPhotoUrl && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Ảnh xe vào (Nhấn để phóng to)</label>
+              <div 
+                className="relative rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:opacity-90 transition bg-black h-48 flex items-center justify-center"
+                onClick={() => setViewImage(editTrip.checkInPhotoUrl)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={editTrip.checkInPhotoUrl} alt="Ảnh vào" className="max-w-full max-h-full object-contain" />
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Tài xế</label>
