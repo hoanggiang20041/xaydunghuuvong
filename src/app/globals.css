@@ -173,6 +173,12 @@ body {
   margin-bottom: 4px;
 }
 
+/* Fix option contrast in dark mode */
+.dark option {
+  background-color: var(--card);
+  color: var(--foreground);
+}
+
 /* Badge styles */
 .badge {
   display: inline-flex;
