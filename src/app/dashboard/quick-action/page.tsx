@@ -124,7 +124,7 @@ export default function QuickActionPage() {
           body: JSON.stringify(payload)
         })
         const data = await res.json()
-        if (!data.success) throw new Error(data.message)
+        if (!data.success) throw new Error(data.error?.message || data.message || 'Lỗi hệ thống')
         
         toast({ title: '✅ XE VÀO THÀNH CÔNG', variant: 'success' })
       } else {
@@ -134,13 +134,13 @@ export default function QuickActionPage() {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            action: 'checkout',
+            action: 'check_out',
             actualVolume: actualVolume ? parseFloat(actualVolume) : null,
             checkOutPhotoUrl: photo
           })
         })
         const data = await res.json()
-        if (!data.success) throw new Error(data.message)
+        if (!data.success) throw new Error(data.error?.message || data.message || 'Lỗi hệ thống')
         
         toast({ title: '✅ XE RA THÀNH CÔNG', variant: 'success' })
       }

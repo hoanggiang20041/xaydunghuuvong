@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from '@/components/ui/toaster'
 import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '@/lib/constants'
-import { Route, Search, Filter, Loader2, Eye, Clock, Camera, X, Edit2 } from 'lucide-react'
+import { Route, Search, Filter, Loader2, Eye, Clock, Camera, X, Edit2, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { Modal } from '@/components/ui/modal'
 
@@ -18,6 +18,7 @@ export default function TripsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
   const [viewImage, setViewImage] = useState<string | null>(null)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   // Edit logic
   const [editTrip, setEditTrip] = useState<any>(null)
@@ -84,6 +85,20 @@ export default function TripsPage() {
       toast({ title: 'Lỗi', description: err.message, variant: 'error' })
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteId) return
+    try {
+      const res = await fetch(`/api/trips/${deleteId}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error?.message || data.message || 'Lỗi hệ thống')
+      toast({ title: 'Xóa chuyến xe thành công', variant: 'success' })
+      setDeleteId(null)
+      fetchTrips()
+    } catch (err: any) {
+      toast({ title: 'Lỗi', description: err.message, variant: 'error' })
     }
   }
 
@@ -215,10 +230,15 @@ export default function TripsPage() {
                         {TRIP_STATUS_LABELS[trip.status] || trip.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
                       {hasPermission('trips.update') && (
                         <button onClick={() => handleOpenEdit(trip)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Bổ sung thông tin">
                           <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {hasPermission('trips.delete') && (
+                        <button onClick={() => setDeleteId(trip.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors ml-1" title="Xóa chuyến">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       )}
                     </td>
@@ -252,6 +272,19 @@ export default function TripsPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal isOpen={!!deleteId} onClose={() => setDeleteId(null)} title="Xác nhận xóa chuyến xe">
+        <div className="p-1">
+          <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">
+            Bạn có chắc chắn muốn xóa chuyến xe này? Hành động này không thể hoàn tác và chuyến xe sẽ bị đánh dấu đã xóa.
+          </p>
+          <div className="flex justify-end gap-3 mt-6">
+            <button onClick={() => setDeleteId(null)} className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-all">Hủy</button>
+            <button onClick={handleDelete} className="px-5 py-2.5 bg-red-600 text-white hover:bg-red-700 rounded-lg text-sm font-medium transition-all shadow-sm">Xác nhận xóa</button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Edit Modal */}
       <Modal isOpen={!!editTrip} onClose={() => !submitting && setEditTrip(null)} title={`Bổ sung thông tin: ${editTrip?.tripCode}`}>

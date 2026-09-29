@@ -309,3 +309,35 @@ async function handleUpdateInfo(trip: any, body: any, user: any) {
 
   return successResponse(updated)
 }
+
+// DELETE soft delete
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return unauthorizedResponse()
+    if (!hasPermission(user, PERMISSIONS.TRIPS_DELETE)) return forbiddenResponse()
+
+    const { id } = await params
+    const trip = await prisma.trip.findFirst({
+      where: { id, deletedAt: null },
+    })
+
+    if (!trip) return notFoundResponse('Không tìm thấy chuyến xe')
+    if (!hasProjectAccess(user, trip.projectId)) return forbiddenResponse()
+
+    await prisma.trip.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    })
+
+    await auditAction(user, 'DELETE', 'trips', trip.id, { tripCode: trip.tripCode }, null)
+
+    return successResponse({ success: true })
+  } catch (error) {
+    console.error('Delete trip error:', error)
+    return serverErrorResponse()
+  }
+}
