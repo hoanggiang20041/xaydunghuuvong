@@ -86,6 +86,8 @@ export async function PUT(
       return handleComplete(trip, user)
     } else if (action === 'cancel') {
       return handleCancel(trip, body, user)
+    } else if (action === 'update_info') {
+      return handleUpdateInfo(trip, body, user)
     }
 
     return errorResponse('INVALID_ACTION', 'Thao tác không hợp lệ')
@@ -259,6 +261,50 @@ async function handleCancel(trip: any, body: any, user: any) {
   await auditAction(user, 'CANCEL', 'trips', trip.id,
     { status: trip.status },
     { status: 'CANCELLED', reason: parsed.data.reason }
+  )
+
+  return successResponse(updated)
+}
+
+async function handleUpdateInfo(trip: any, body: any, user: any) {
+  if (!hasPermission(user, PERMISSIONS.TRIPS_UPDATE)) return forbiddenResponse()
+
+  const { driverId, dumpLocationId, expectedVolume, actualVolume, notes } = body
+  
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedTrip = await tx.trip.update({
+      where: { id: trip.id },
+      data: {
+        ...(driverId !== undefined && { driverId }),
+        ...(dumpLocationId !== undefined && { dumpLocationId }),
+        ...(expectedVolume !== undefined && { expectedVolume: Number(expectedVolume) || null }),
+        ...(actualVolume !== undefined && { actualVolume: Number(actualVolume) || null }),
+        ...(notes !== undefined && { notes }),
+        version: { increment: 1 },
+      },
+      include: {
+        driver: { select: { fullName: true } },
+        dumpLocation: { select: { name: true } }
+      }
+    })
+
+    await tx.tripEvent.create({
+      data: {
+        tripId: trip.id,
+        eventType: 'EDIT_REQUEST_APPROVED',
+        oldStatus: trip.status,
+        newStatus: trip.status,
+        performedById: user.id,
+        notes: 'Cập nhật thông tin bổ sung',
+      },
+    })
+
+    return updatedTrip
+  })
+
+  await auditAction(user, 'UPDATE_INFO', 'trips', trip.id, 
+    { driverId: trip.driverId, dumpLocationId: trip.dumpLocationId, expectedVolume: trip.expectedVolume, actualVolume: trip.actualVolume },
+    { driverId: updated.driverId, dumpLocationId: updated.dumpLocationId, expectedVolume: updated.expectedVolume, actualVolume: updated.actualVolume }
   )
 
   return successResponse(updated)

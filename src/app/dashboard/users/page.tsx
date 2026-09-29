@@ -164,24 +164,34 @@ export default function UsersPage() {
       <Modal isOpen={isModalOpen} onClose={() => !submitting && setIsModalOpen(false)} title={editingId ? 'Sửa Người dùng' : 'Thêm Người dùng'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Username *</label>
-            <input required value={formData.username} onChange={e => setFormData(p => ({...p, username: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+              Username <span className="text-red-500">*</span>
+            </label>
+            <input required value={formData.username} onChange={e => setFormData(p => ({...p, username: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Họ tên *</label>
-            <input required value={formData.fullName} onChange={e => setFormData(p => ({...p, fullName: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+              Họ tên <span className="text-red-500">*</span>
+            </label>
+            <input required value={formData.fullName} onChange={e => setFormData(p => ({...p, fullName: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Email *</label>
-            <input type="email" required value={formData.email} onChange={e => setFormData(p => ({...p, email: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input type="email" required value={formData.email} onChange={e => setFormData(p => ({...p, email: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Mật khẩu {editingId && '(Bỏ trống nếu không đổi)'} (Tối thiểu 8 ký tự)</label>
-            <input type="password" minLength={8} required={!editingId} value={formData.password} onChange={e => setFormData(p => ({...p, password: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+              Mật khẩu {editingId && '(Bỏ trống nếu không đổi)'} <span className={!editingId ? 'text-red-500' : 'hidden'}>*</span>
+            </label>
+            <input type="password" minLength={8} required={!editingId} value={formData.password} onChange={e => setFormData(p => ({...p, password: e.target.value}))} placeholder="Tối thiểu 8 ký tự" className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Vai trò</label>
-            <select value={formData.role} onChange={e => setFormData(p => ({...p, role: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none">
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+              Vai trò <span className="text-red-500">*</span>
+            </label>
+            <select required value={formData.role} onChange={e => setFormData(p => ({...p, role: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all bg-white dark:bg-slate-800">
               <option value="GATE_STAFF">Bảo vệ cổng (Gate Staff)</option>
               <option value="SUPERVISOR">Giám sát (Supervisor)</option>
               <option value="ACCOUNTANT">Kế toán (Accountant)</option>
@@ -189,10 +199,10 @@ export default function UsersPage() {
               {user?.isSuperAdmin && <option value="SUPER_ADMIN">Quản trị tối cao (Super Admin)</option>}
             </select>
           </div>
-          <div className="flex justify-end gap-2 mt-6">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 rounded-lg text-sm font-medium">Hủy</button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center">
-              {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Lưu'}
+          <div className="flex justify-end gap-3 mt-8 border-t border-slate-100 dark:border-slate-800 pt-5">
+            <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-all">Hủy</button>
+            <button type="submit" disabled={submitting} className="px-5 py-2.5 bg-[#1a365d] hover:bg-[#1a365d]/90 text-white rounded-lg text-sm font-medium flex items-center transition-all shadow-sm">
+              {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Lưu thông tin'}
             </button>
           </div>
         </form>

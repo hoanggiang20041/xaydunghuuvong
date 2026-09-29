@@ -164,33 +164,37 @@ export default function ProjectsPage() {
       <Modal isOpen={isModalOpen} onClose={() => !submitting && setIsModalOpen(false)} title={editingId ? 'Sửa Công trình' : 'Thêm Công trình'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Mã công trình *</label>
-            <input required value={formData.code} onChange={e => setFormData(p => ({...p, code: e.target.value.toUpperCase()}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none uppercase font-mono" />
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+              Mã công trình <span className="text-red-500">*</span>
+            </label>
+            <input required value={formData.code} onChange={e => setFormData(p => ({...p, code: e.target.value.toUpperCase()}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none uppercase font-mono transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Tên công trình *</label>
-            <input required value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+              Tên công trình <span className="text-red-500">*</span>
+            </label>
+            <input required value={formData.name} onChange={e => setFormData(p => ({...p, name: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Địa chỉ</label>
-            <input value={formData.address} onChange={e => setFormData(p => ({...p, address: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Địa chỉ</label>
+            <input value={formData.address} onChange={e => setFormData(p => ({...p, address: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Chủ đầu tư</label>
-            <input value={formData.investor} onChange={e => setFormData(p => ({...p, investor: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none" />
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Chủ đầu tư</label>
+            <input value={formData.investor} onChange={e => setFormData(p => ({...p, investor: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Trạng thái</label>
-            <select value={formData.status} onChange={e => setFormData(p => ({...p, status: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none">
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Trạng thái</label>
+            <select value={formData.status} onChange={e => setFormData(p => ({...p, status: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all bg-white dark:bg-slate-800">
               <option value="ACTIVE">Đang thi công (ACTIVE)</option>
               <option value="COMPLETED">Đã hoàn thành (COMPLETED)</option>
               <option value="SUSPENDED">Tạm ngưng (SUSPENDED)</option>
             </select>
           </div>
-          <div className="flex justify-end gap-2 mt-6">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 rounded-lg text-sm font-medium">Hủy</button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center">
-              {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Lưu'}
+          <div className="flex justify-end gap-3 mt-8 border-t border-slate-100 dark:border-slate-800 pt-5">
+            <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-all">Hủy</button>
+            <button type="submit" disabled={submitting} className="px-5 py-2.5 bg-[#1a365d] hover:bg-[#1a365d]/90 text-white rounded-lg text-sm font-medium flex items-center transition-all shadow-sm">
+              {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Lưu thông tin'}
             </button>
           </div>
         </form>

@@ -258,6 +258,7 @@ export default function CheckInPage() {
             <input
               ref={plateRef}
               type="text"
+              required
               value={plateNumber}
               onChange={(e) => {
                 const val = e.target.value.toUpperCase()

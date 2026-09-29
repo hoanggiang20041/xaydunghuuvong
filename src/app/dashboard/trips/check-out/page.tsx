@@ -143,7 +143,7 @@ export default function CheckOutPage() {
   // Show selected trip detail
   if (selectedTrip) {
     return (
-      <div className="max-w-2xl mx-auto">
+      <form onSubmit={(e) => { e.preventDefault(); handleCheckOut(); }} className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center text-white">
             <ArrowUpFromLine className="w-6 h-6" />
@@ -212,6 +212,7 @@ export default function CheckOutPage() {
             </label>
             <input
               type="number"
+              required
               step="0.1"
               min="0"
               value={actualVolume}
@@ -236,13 +237,14 @@ export default function CheckOutPage() {
           {/* Actions */}
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={() => setSelectedTrip(null)}
               className="flex-1 py-3 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition font-medium"
             >
               Quay lại
             </button>
             <button
-              onClick={handleCheckOut}
+              type="submit"
               disabled={submitting}
               className="flex-[2] py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-300 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
             >
@@ -254,7 +256,7 @@ export default function CheckOutPage() {
             </button>
           </div>
         </div>
-      </div>
+      </form>
     )
   }
 

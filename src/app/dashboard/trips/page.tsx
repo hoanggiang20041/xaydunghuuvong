@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from '@/components/ui/toaster'
 import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '@/lib/constants'
-import { Route, Search, Filter, Loader2, Eye, Clock, Camera, X } from 'lucide-react'
+import { Route, Search, Filter, Loader2, Eye, Clock, Camera, X, Edit2 } from 'lucide-react'
 import Link from 'next/link'
+import { Modal } from '@/components/ui/modal'
 
 export default function TripsPage() {
   const { hasPermission } = useAuth()
@@ -17,6 +18,74 @@ export default function TripsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
   const [viewImage, setViewImage] = useState<string | null>(null)
+
+  // Edit logic
+  const [editTrip, setEditTrip] = useState<any>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [editForm, setEditForm] = useState({
+    driverId: '',
+    dumpLocationId: '',
+    expectedVolume: '',
+    actualVolume: '',
+    notes: ''
+  })
+  const [options, setOptions] = useState({ drivers: [], dumpLocations: [] })
+
+  const fetchOptions = async () => {
+    try {
+      const [dr, dl] = await Promise.all([
+        fetch('/api/drivers').then(r => r.json()),
+        fetch('/api/dump-locations').then(r => r.json())
+      ])
+      setOptions({
+        drivers: dr.data || [],
+        dumpLocations: dl.data || []
+      })
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleOpenEdit = (trip: any) => {
+    setEditTrip(trip)
+    setEditForm({
+      driverId: trip.driverId || '',
+      dumpLocationId: trip.dumpLocationId || '',
+      expectedVolume: trip.expectedVolume ? String(trip.expectedVolume) : '',
+      actualVolume: trip.actualVolume ? String(trip.actualVolume) : '',
+      notes: trip.notes || ''
+    })
+    if (options.drivers.length === 0) fetchOptions()
+  }
+
+  const handleUpdateTrip = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editTrip) return
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/trips/${editTrip.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_info',
+          driverId: editForm.driverId || null,
+          dumpLocationId: editForm.dumpLocationId || null,
+          expectedVolume: editForm.expectedVolume ? Number(editForm.expectedVolume) : null,
+          actualVolume: editForm.actualVolume ? Number(editForm.actualVolume) : null,
+          notes: editForm.notes
+        })
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.message)
+      toast({ title: 'Cập nhật thành công', variant: 'success' })
+      setEditTrip(null)
+      fetchTrips()
+    } catch (err: any) {
+      toast({ title: 'Lỗi', description: err.message, variant: 'error' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const fetchTrips = useCallback(async () => {
     setLoading(true)
@@ -103,6 +172,7 @@ export default function TripsPage() {
                   <th className="px-4 py-3 hidden md:table-cell">Giờ vào</th>
                   <th className="px-4 py-3 hidden lg:table-cell">Giờ ra</th>
                   <th className="px-4 py-3">Trạng thái</th>
+                  <th className="px-4 py-3 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -145,6 +215,13 @@ export default function TripsPage() {
                         {TRIP_STATUS_LABELS[trip.status] || trip.status}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      {hasPermission('trips.update') && (
+                        <button onClick={() => handleOpenEdit(trip)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Bổ sung thông tin">
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -175,6 +252,47 @@ export default function TripsPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Modal */}
+      <Modal isOpen={!!editTrip} onClose={() => !submitting && setEditTrip(null)} title={`Bổ sung thông tin: ${editTrip?.tripCode}`}>
+        <form onSubmit={handleUpdateTrip} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Tài xế</label>
+              <select value={editForm.driverId} onChange={e => setEditForm(p => ({...p, driverId: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                <option value="">-- Chọn tài xế --</option>
+                {options.drivers.map((d: any) => <option key={d.id} value={d.id}>{d.fullName}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Điểm đổ hàng</label>
+              <select value={editForm.dumpLocationId} onChange={e => setEditForm(p => ({...p, dumpLocationId: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                <option value="">-- Chọn điểm đổ --</option>
+                {options.dumpLocations.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Số m³ dự kiến</label>
+              <input type="number" step="0.1" min="0" value={editForm.expectedVolume} onChange={e => setEditForm(p => ({...p, expectedVolume: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Số m³ thực tế</label>
+              <input type="number" step="0.1" min="0" value={editForm.actualVolume} onChange={e => setEditForm(p => ({...p, actualVolume: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Ghi chú</label>
+            <textarea value={editForm.notes} onChange={e => setEditForm(p => ({...p, notes: e.target.value}))} rows={2} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"></textarea>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <button type="button" onClick={() => setEditTrip(null)} disabled={submitting} className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition">Hủy</button>
+            <button type="submit" disabled={submitting} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit2 className="w-4 h-4" />}
+              Lưu thay đổi
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

@@ -101,7 +101,8 @@ export default function QuickActionPage() {
     reader.readAsDataURL(file)
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     if (!plateNumber) return toast({ title: 'Vui lòng nhập biển số xe', variant: 'error' })
     if (!photo) return toast({ title: 'Bắt buộc phải chụp ảnh xe', variant: 'error' })
 
@@ -218,7 +219,7 @@ export default function QuickActionPage() {
         </button>
       </div>
 
-      <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Photo Capture */}
         <div>
           <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Chụp ảnh xe (Bắt buộc) *</label>
@@ -258,6 +259,7 @@ export default function QuickActionPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
             <input 
               type="text" 
+              required
               value={plateNumber}
               onChange={e => setPlateNumber(e.target.value.toUpperCase())}
               placeholder="VD: 51C-123.45"
@@ -292,6 +294,7 @@ export default function QuickActionPage() {
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Vật liệu *</label>
               <select 
+                required
                 value={selectedMaterial} 
                 onChange={e => setSelectedMaterial(e.target.value)}
                 className="w-full px-4 py-4 text-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none"
@@ -307,6 +310,7 @@ export default function QuickActionPage() {
               <div>
                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Công trình *</label>
                 <select 
+                  required
                   value={selectedProject} 
                   onChange={e => setSelectedProject(e.target.value)}
                   className="w-full px-4 py-4 text-lg bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 focus:outline-none"
@@ -324,6 +328,7 @@ export default function QuickActionPage() {
               <input 
                 type="number" 
                 step="0.1"
+                min="0"
                 value={expectedVolume}
                 onChange={e => setExpectedVolume(e.target.value)}
                 placeholder="Ví dụ: 15.5 (có thể để trống)"
@@ -350,7 +355,9 @@ export default function QuickActionPage() {
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Số khối (m³) thực tế *</label>
               <input 
                 type="number" 
+                required
                 step="0.1"
+                min="0"
                 value={actualVolume}
                 onChange={e => setActualVolume(e.target.value)}
                 placeholder="Ví dụ: 15.5"
@@ -362,7 +369,7 @@ export default function QuickActionPage() {
 
         {/* Submit Button */}
         <button 
-          onClick={handleSubmit}
+          type="submit"
           disabled={loading}
           className={`w-full py-5 rounded-xl font-bold text-xl text-white shadow-lg transition-transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2 ${
             mode === 'checkin' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-500 hover:bg-amber-600'
@@ -372,7 +379,7 @@ export default function QuickActionPage() {
             mode === 'checkin' ? 'XÁC NHẬN XE VÀO' : 'XÁC NHẬN XE RA'
           )}
         </button>
-      </div>
+      </form>
     </div>
   )
 }
