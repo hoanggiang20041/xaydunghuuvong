@@ -269,12 +269,16 @@ async function handleCancel(trip: any, body: any, user: any) {
 async function handleUpdateInfo(trip: any, body: any, user: any) {
   if (!hasPermission(user, PERMISSIONS.TRIPS_UPDATE)) return forbiddenResponse()
 
-  const { driverId, dumpLocationId, expectedVolume, actualVolume, notes } = body
+  const { projectId, materialId, vehicleId, pickupLocationId, driverId, dumpLocationId, expectedVolume, actualVolume, notes } = body
   
   const updated = await prisma.$transaction(async (tx) => {
     const updatedTrip = await tx.trip.update({
       where: { id: trip.id },
       data: {
+        ...(projectId !== undefined && { projectId }),
+        ...(materialId !== undefined && { materialId }),
+        ...(vehicleId !== undefined && { vehicleId }),
+        ...(pickupLocationId !== undefined && { pickupLocationId }),
         ...(driverId !== undefined && { driverId }),
         ...(dumpLocationId !== undefined && { dumpLocationId }),
         ...(expectedVolume !== undefined && { expectedVolume: Number(expectedVolume) || null }),
@@ -303,8 +307,8 @@ async function handleUpdateInfo(trip: any, body: any, user: any) {
   })
 
   await auditAction(user, 'UPDATE_INFO', 'trips', trip.id, 
-    { driverId: trip.driverId, dumpLocationId: trip.dumpLocationId, expectedVolume: trip.expectedVolume, actualVolume: trip.actualVolume },
-    { driverId: updated.driverId, dumpLocationId: updated.dumpLocationId, expectedVolume: updated.expectedVolume, actualVolume: updated.actualVolume }
+    { projectId: trip.projectId, materialId: trip.materialId, vehicleId: trip.vehicleId, pickupLocationId: trip.pickupLocationId, driverId: trip.driverId, dumpLocationId: trip.dumpLocationId, expectedVolume: trip.expectedVolume, actualVolume: trip.actualVolume },
+    { projectId: updated.projectId, materialId: updated.materialId, vehicleId: updated.vehicleId, pickupLocationId: updated.pickupLocationId, driverId: updated.driverId, dumpLocationId: updated.dumpLocationId, expectedVolume: updated.expectedVolume, actualVolume: updated.actualVolume }
   )
 
   return successResponse(updated)

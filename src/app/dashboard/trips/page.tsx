@@ -14,6 +14,7 @@ export default function TripsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
+  const [date, setDate] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
@@ -24,23 +25,35 @@ export default function TripsPage() {
   const [editTrip, setEditTrip] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
   const [editForm, setEditForm] = useState({
+    projectId: '',
+    materialId: '',
+    vehicleId: '',
+    pickupLocationId: '',
     driverId: '',
     dumpLocationId: '',
     expectedVolume: '',
     actualVolume: '',
     notes: ''
   })
-  const [options, setOptions] = useState({ drivers: [], dumpLocations: [] })
+  const [options, setOptions] = useState<any>({ drivers: [], dumpLocations: [], projects: [], materials: [], vehicles: [], pickupLocations: [] })
 
   const fetchOptions = async () => {
     try {
-      const [dr, dl] = await Promise.all([
+      const [dr, dl, pr, ma, ve, pl] = await Promise.all([
         fetch('/api/drivers').then(r => r.json()),
-        fetch('/api/dump-locations').then(r => r.json())
+        fetch('/api/dump-locations').then(r => r.json()),
+        fetch('/api/projects').then(r => r.json()),
+        fetch('/api/materials').then(r => r.json()),
+        fetch('/api/vehicles').then(r => r.json()),
+        fetch('/api/pickup-locations').then(r => r.json())
       ])
       setOptions({
         drivers: dr.data || [],
-        dumpLocations: dl.data || []
+        dumpLocations: dl.data || [],
+        projects: pr.data || [],
+        materials: ma.data || [],
+        vehicles: ve.data || [],
+        pickupLocations: pl.data || []
       })
     } catch (e) {
       console.error(e)
@@ -50,6 +63,10 @@ export default function TripsPage() {
   const handleOpenEdit = (trip: any) => {
     setEditTrip(trip)
     setEditForm({
+      projectId: trip.projectId || '',
+      materialId: trip.materialId || '',
+      vehicleId: trip.vehicleId || '',
+      pickupLocationId: trip.pickupLocationId || '',
       driverId: trip.driverId || '',
       dumpLocationId: trip.dumpLocationId || '',
       expectedVolume: trip.expectedVolume ? String(trip.expectedVolume) : '',
@@ -69,6 +86,10 @@ export default function TripsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'update_info',
+          projectId: editForm.projectId || null,
+          materialId: editForm.materialId || null,
+          vehicleId: editForm.vehicleId || null,
+          pickupLocationId: editForm.pickupLocationId || null,
           driverId: editForm.driverId || null,
           dumpLocationId: editForm.dumpLocationId || null,
           expectedVolume: editForm.expectedVolume ? Number(editForm.expectedVolume) : null,
@@ -108,6 +129,10 @@ export default function TripsPage() {
       const params = new URLSearchParams({ page: page.toString(), pageSize: '20' })
       if (search) params.set('search', search)
       if (status) params.set('status', status)
+      if (date) {
+        params.set('startDate', date)
+        params.set('endDate', date)
+      }
 
       const res = await fetch(`/api/trips?${params}`)
       const data = await res.json()
@@ -154,6 +179,12 @@ export default function TripsPage() {
             className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition"
           />
         </div>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => { setDate(e.target.value); setPage(1) }}
+          className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-slate-500"
+        />
         <select
           value={status}
           onChange={(e) => { setStatus(e.target.value); setPage(1) }}
@@ -220,10 +251,10 @@ export default function TripsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell text-xs text-slate-500">
-                      {trip.checkInAt ? new Date(trip.checkInAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-'}
+                      {trip.checkInAt ? new Date(trip.checkInAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell text-xs text-slate-500">
-                      {trip.checkOutAt ? new Date(trip.checkOutAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '-'}
+                      {trip.checkOutAt ? new Date(trip.checkOutAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${TRIP_STATUS_COLORS[trip.status] || ''}`}>
@@ -306,17 +337,45 @@ export default function TripsPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <label className="block text-sm font-medium mb-1">Công trình <span className="text-red-500">*</span></label>
+              <select value={editForm.projectId} onChange={e => setEditForm(p => ({...p, projectId: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm" required>
+                <option value="">-- Chọn công trình --</option>
+                {options.projects?.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Vật liệu <span className="text-red-500">*</span></label>
+              <select value={editForm.materialId} onChange={e => setEditForm(p => ({...p, materialId: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm" required>
+                <option value="">-- Chọn vật liệu --</option>
+                {options.materials?.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Xe vận chuyển <span className="text-red-500">*</span></label>
+              <select value={editForm.vehicleId} onChange={e => setEditForm(p => ({...p, vehicleId: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm" required>
+                <option value="">-- Chọn xe --</option>
+                {options.vehicles?.map((v: any) => <option key={v.id} value={v.id}>{v.plateNumber}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium mb-1">Tài xế</label>
               <select value={editForm.driverId} onChange={e => setEditForm(p => ({...p, driverId: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
                 <option value="">-- Chọn tài xế --</option>
-                {options.drivers.map((d: any) => <option key={d.id} value={d.id}>{d.fullName}</option>)}
+                {options.drivers?.map((d: any) => <option key={d.id} value={d.id}>{d.fullName}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Điểm lấy hàng</label>
+              <select value={editForm.pickupLocationId} onChange={e => setEditForm(p => ({...p, pickupLocationId: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                <option value="">-- Chọn điểm lấy --</option>
+                {options.pickupLocations?.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Điểm đổ hàng</label>
               <select value={editForm.dumpLocationId} onChange={e => setEditForm(p => ({...p, dumpLocationId: e.target.value}))} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none text-sm">
                 <option value="">-- Chọn điểm đổ --</option>
-                {options.dumpLocations.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                {options.dumpLocations?.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </div>
             <div>

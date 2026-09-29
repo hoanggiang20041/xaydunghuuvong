@@ -18,8 +18,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Tổng quan', href: '/dashboard', icon: LayoutDashboard, permission: null },
   { type: 'divider', label: 'VẬN HÀNH' },
   { label: 'Thao tác nhanh', href: '/dashboard/quick-action', icon: Zap, permission: 'trips.check_in' },
-  { label: 'Xe vào / Xe ra', href: '/dashboard/trips/check-in', icon: Truck, permission: 'trips.check_in' },
-  { label: 'Xe đang ở CT', href: '/dashboard/vehicles-onsite', icon: MapPin, permission: 'trips.view' },
   { label: 'Danh sách chuyến', href: '/dashboard/trips', icon: Route, permission: 'trips.view' },
   { type: 'divider', label: 'DANH MỤC' },
   { label: 'Công trình', href: '/dashboard/projects', icon: Building2, permission: 'projects.view' },
