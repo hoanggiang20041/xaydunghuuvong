@@ -106,6 +106,7 @@ export function AppSidebar() {
             <div className="text-sm font-medium text-white truncate">{user.fullName}</div>
             <div className="text-[11px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
               {user.roles?.[0] === 'SUPER_ADMIN' ? 'Quản trị viên' :
+               user.roles?.[0] === 'DIRECTOR' ? 'Giám đốc' :
                user.roles?.[0] === 'ADMIN' ? 'Quản lý' :
                user.roles?.[0] === 'SUPERVISOR' ? 'Giám sát' :
                user.roles?.[0] === 'GATE_STAFF' ? 'NV Cổng' :

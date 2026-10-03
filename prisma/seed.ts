@@ -65,6 +65,7 @@ async function main() {
 
   const roleData = [
     { name: 'SUPER_ADMIN', displayName: 'Super Admin', description: 'Toàn quyền hệ thống', isSystem: true },
+    { name: 'DIRECTOR', displayName: 'Giám đốc', description: 'Theo dõi tiến độ, xem lịch sử công trình', isSystem: true },
     { name: 'ADMIN', displayName: 'Quản lý', description: 'Quản lý công trình và nhân sự', isSystem: true },
     { name: 'SUPERVISOR', displayName: 'Giám sát', description: 'Giám sát và xác nhận chuyến xe', isSystem: true },
     { name: 'GATE_STAFF', displayName: 'Nhân viên cổng', description: 'Nhập liệu xe vào/ra', isSystem: true },
@@ -73,6 +74,17 @@ async function main() {
 
   const rolePermMap: Record<string, string[]> = {
     SUPER_ADMIN: allPermissions.map(p => p.code),
+    DIRECTOR: [
+      'projects.view',
+      'vehicles.view',
+      'drivers.view',
+      'materials.view',
+      'locations.view',
+      'trips.view', 'trips.export',
+      'reports.view', 'reports.export',
+      'audit.view',
+      'notifications.view',
+    ],
     ADMIN: [
       'users.view',
       'projects.view', 'projects.create', 'projects.update',
@@ -148,6 +160,7 @@ async function main() {
 
   const users = [
     { username: 'superadmin', email: 'superadmin@demo.local', fullName: 'Super Admin', phone: '0901000001', role: 'SUPER_ADMIN' },
+    { username: 'giamdoc', email: 'giamdoc@demo.local', fullName: 'Hoàng Văn Giám Đốc', phone: '0901000006', role: 'DIRECTOR' },
     { username: 'admin', email: 'admin@demo.local', fullName: 'Nguyễn Văn Quản Lý', phone: '0901000002', role: 'ADMIN' },
     { username: 'supervisor', email: 'supervisor@demo.local', fullName: 'Trần Văn Giám Sát', phone: '0901000003', role: 'SUPERVISOR' },
     { username: 'gatestaff', email: 'gatestaff@demo.local', fullName: 'Lê Văn Cổng', phone: '0901000004', role: 'GATE_STAFF' },
