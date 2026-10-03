@@ -1,6 +1,17 @@
 export const APP_NAME = 'Quản lý Vận chuyển'
 export const APP_DESCRIPTION = 'Hệ thống quản lý xe vận chuyển công trình'
 
+/** Short number: 9.2 -> "9,2", 15 -> "15", 9.25 -> "9,3" */
+export function fmtNum(v: unknown, digits = 1): string {
+  const n = Number(v) || 0
+  return n.toLocaleString('vi-VN', { maximumFractionDigits: digits })
+}
+
+/** Short volume: "9,2 m³" */
+export function fmtM3(v: unknown): string {
+  return `${fmtNum(v)} m³`
+}
+
 // Trip status labels in Vietnamese
 export const TRIP_STATUS_LABELS: Record<string, string> = {
   CREATED: 'Đã tạo',

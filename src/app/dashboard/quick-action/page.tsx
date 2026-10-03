@@ -537,7 +537,7 @@ export default function QuickActionPage() {
                 <div className="mt-3 bg-blue-900/40 border border-blue-700 rounded-xl p-4 text-center">
                   <span className="text-sm text-blue-300">Khối lượng:</span>
                   <div className="text-3xl font-black text-blue-300 mt-1">
-                    {computedVolume.toFixed(2)} m³
+                    {computedVolume.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} m³
                   </div>
                 </div>
               )}

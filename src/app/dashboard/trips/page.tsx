@@ -3,10 +3,35 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from '@/components/ui/toaster'
-import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '@/lib/constants'
+import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS, fmtM3, fmtNum } from '@/lib/constants'
 import { Route, Search, Filter, Loader2, Eye, Clock, Camera, X, Edit2, Trash2, Zap, Info, Ruler } from 'lucide-react'
 import Link from 'next/link'
 import { Modal } from '@/components/ui/modal'
+
+const PERIODS = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'today', label: 'Hôm nay' },
+  { key: 'yesterday', label: 'Hôm qua' },
+  { key: 'week', label: '7 ngày' },
+  { key: 'month', label: 'Tháng này' },
+]
+
+// YYYY-MM-DD in Vietnam time
+const vnDay = (offsetDays = 0) => {
+  const d = new Date(Date.now() + offsetDays * 86400000)
+  return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
+}
+
+function periodRange(period: string): { from: string; to: string } | null {
+  const today = vnDay()
+  switch (period) {
+    case 'today': return { from: today, to: today }
+    case 'yesterday': { const y = vnDay(-1); return { from: y, to: y } }
+    case 'week': return { from: vnDay(-6), to: today }
+    case 'month': return { from: `${today.slice(0, 7)}-01`, to: today }
+    default: return null
+  }
+}
 
 export default function TripsPage() {
   const { hasPermission } = useAuth()
@@ -15,6 +40,7 @@ export default function TripsPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [date, setDate] = useState('')
+  const [period, setPeriod] = useState('all')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
@@ -130,9 +156,10 @@ export default function TripsPage() {
       const params = new URLSearchParams({ page: page.toString(), pageSize: '20' })
       if (search) params.set('search', search)
       if (status) params.set('status', status)
-      if (date) {
-        params.set('startDate', date)
-        params.set('endDate', date)
+      const range = date ? { from: date, to: date } : periodRange(period)
+      if (range) {
+        params.set('startDate', range.from)
+        params.set('endDate', range.to)
       }
 
       const res = await fetch(`/api/trips?${params}`)
@@ -147,7 +174,7 @@ export default function TripsPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, status, date, page])
+  }, [search, status, date, period, page])
 
   useEffect(() => { fetchTrips() }, [fetchTrips])
 
@@ -168,6 +195,31 @@ export default function TripsPage() {
         </div>
       </div>
 
+      {/* Period quick filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-white dark:bg-slate-800">
+          {PERIODS.map(p => (
+            <button
+              key={p.key}
+              onClick={() => { setPeriod(p.key); setDate(''); setPage(1) }}
+              className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-r border-slate-200 dark:border-slate-700 last:border-r-0 ${
+                period === p.key && !date
+                  ? 'bg-amber-500 text-white'
+                  : 'text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => { setDate(e.target.value); setPeriod(e.target.value ? '' : 'all'); setPage(1) }}
+          className={`px-3 py-2 bg-white dark:bg-slate-800 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${date ? 'border-amber-500 text-slate-900 dark:text-white' : 'border-slate-200 dark:border-slate-700 text-slate-500'}`}
+        />
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -180,12 +232,6 @@ export default function TripsPage() {
             className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 transition"
           />
         </div>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => { setDate(e.target.value); setPage(1) }}
-          className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50 text-slate-500"
-        />
         <select
           value={status}
           onChange={(e) => { setStatus(e.target.value); setPage(1) }}
@@ -216,7 +262,7 @@ export default function TripsPage() {
                   <th className="px-4 py-3 hidden md:table-cell">Loại xe</th>
                   <th className="px-4 py-3 hidden md:table-cell">Tài xế</th>
                   <th className="px-4 py-3 hidden lg:table-cell">Vật liệu</th>
-                  <th className="px-4 py-3 text-right">Khối lượng (m³)</th>
+                  <th className="px-4 py-3 text-right">Khối lượng</th>
                   <th className="px-4 py-3 hidden xl:table-cell">Điểm đổ</th>
                   <th className="px-4 py-3 text-center">Ảnh</th>
                   <th className="px-4 py-3 whitespace-nowrap">Giờ vào</th>
@@ -245,20 +291,11 @@ export default function TripsPage() {
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="inline-flex px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs">{trip.material?.name}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
                       {(() => {
                         const vol = Number(trip.volumeM3 || trip.actualVolume || trip.expectedVolume || 0)
                         if (vol <= 0) return <span className="text-slate-400 text-xs">—</span>
-                        return (
-                          <div className="flex items-center justify-end gap-1">
-                            <span className="font-semibold text-blue-700 dark:text-blue-400">
-                              {vol.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} m³
-                            </span>
-                            {trip.calculationMethod === 'dimensions' && (
-                              <span title={`${trip.lengthM}×${trip.widthM}×${trip.heightM}`}><Ruler className="w-3 h-3 text-blue-400/70" /></span>
-                            )}
-                          </div>
-                        )
+                        return <span className="font-semibold text-blue-700 dark:text-blue-400">{fmtM3(vol)}</span>
                       })()}
                     </td>
                     <td className="px-4 py-3 hidden xl:table-cell text-slate-500 text-xs">{trip.dumpLocation?.name || '-'}</td>
@@ -481,41 +518,17 @@ export default function TripsPage() {
                 <Ruler className="w-4 h-4" /> Thông tin khối lượng
               </h4>
               {detailTrip.calculationMethod === 'dimensions' && detailTrip.lengthM && detailTrip.widthM && detailTrip.heightM ? (
-                <div className="space-y-2">
-                  <div className="text-xs text-slate-600 dark:text-slate-400">
-                    Phương pháp: <span className="font-medium">Tính theo kích thước</span>
-                  </div>
-                  <table className="w-full text-sm">
-                    <tbody>
-                      <tr className="border-b border-blue-100 dark:border-blue-800">
-                        <td className="py-1.5 text-slate-600 dark:text-slate-400">Dài</td>
-                        <td className="py-1.5 text-right font-medium">{Number(detailTrip.lengthM).toFixed(2)} m</td>
-                      </tr>
-                      <tr className="border-b border-blue-100 dark:border-blue-800">
-                        <td className="py-1.5 text-slate-600 dark:text-slate-400">Rộng</td>
-                        <td className="py-1.5 text-right font-medium">{Number(detailTrip.widthM).toFixed(2)} m</td>
-                      </tr>
-                      <tr className="border-b border-blue-100 dark:border-blue-800">
-                        <td className="py-1.5 text-slate-600 dark:text-slate-400">Cao</td>
-                        <td className="py-1.5 text-right font-medium">{Number(detailTrip.heightM).toFixed(2)} m</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <div className="text-xs text-slate-500 pt-1">
-                    {Number(detailTrip.lengthM).toFixed(2)} × {Number(detailTrip.widthM).toFixed(2)} × {Number(detailTrip.heightM).toFixed(2)} =
-                  </div>
+                <div>
                   <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                    {Number(detailTrip.volumeM3 || 0).toFixed(2)} m³
+                    {fmtM3(detailTrip.volumeM3)}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    {fmtNum(detailTrip.lengthM, 2)} × {fmtNum(detailTrip.widthM, 2)} × {fmtNum(detailTrip.heightM, 2)} m
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">
-                    Phương pháp: <span className="font-medium">Nhập trực tiếp</span>
-                  </div>
-                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                    {Number(detailTrip.volumeM3 || detailTrip.actualVolume || detailTrip.expectedVolume || 0).toFixed(2)} m³
-                  </div>
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                  {fmtM3(detailTrip.volumeM3 || detailTrip.actualVolume || detailTrip.expectedVolume)}
                 </div>
               )}
             </div>

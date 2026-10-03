@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import Link from 'next/link'
+import { fmtM3, fmtNum, TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '@/lib/constants'
 import {
   Truck, TrendingUp, ArrowDownToLine, ArrowUpFromLine, MapPin,
   Package, Clock, RefreshCw, AlertCircle
@@ -217,7 +218,7 @@ export default function DashboardPage() {
                 <span className="text-sm font-medium text-slate-500">TỔNG M³</span>
               </div>
               <div className="text-3xl font-semibold text-slate-900">
-                {Number(stats.totalVolume || 0).toLocaleString('vi-VN')}
+                {fmtNum((stats as any).totalVolumeM3 || stats.totalVolume)}
               </div>
             </div>
           </div>
@@ -259,19 +260,13 @@ export default function DashboardPage() {
                           </td>
                           <td className="px-5 py-3 font-medium text-slate-900">{t.vehicle?.plateNumber}</td>
                           <td className="px-5 py-3 text-slate-600">{t.material?.name || '-'}</td>
-                          <td className="px-5 py-3 text-slate-900 text-right font-medium">
-                            {Number(t.expectedVolume || 0)} m³
+                          <td className="px-5 py-3 text-slate-900 text-right font-medium whitespace-nowrap">
+                            {fmtM3(t.volumeM3 || t.actualVolume || t.expectedVolume)}
                           </td>
                           <td className="px-5 py-3 text-center">
-                            {t.status === 'onsite' ? (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                                Đang ở CT
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Hoàn thành
-                              </span>
-                            )}
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${TRIP_STATUS_COLORS[t.status] || ''}`}>
+                              {TRIP_STATUS_LABELS[t.status] || t.status}
+                            </span>
                           </td>
                         </tr>
                       ))
@@ -304,7 +299,7 @@ export default function DashboardPage() {
                           <td className="px-5 py-3 text-slate-500">{i + 1}</td>
                           <td className="px-5 py-3 font-medium text-slate-900">{m.name}</td>
                           <td className="px-5 py-3 text-right font-semibold text-slate-900">
-                            {Number(m.total).toLocaleString('vi-VN')}
+                            {fmtNum((m as any).volumeM3 || m.total)}
                           </td>
                           <td className="px-5 py-3 text-slate-500">{m.unit}</td>
                         </tr>
