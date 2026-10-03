@@ -213,9 +213,10 @@ export default function TripsPage() {
                   <th className="px-4 py-3">Mã chuyến</th>
                   <th className="px-4 py-3">Công trình</th>
                   <th className="px-4 py-3">Biển số</th>
+                  <th className="px-4 py-3 hidden md:table-cell">Loại xe</th>
                   <th className="px-4 py-3 hidden md:table-cell">Tài xế</th>
                   <th className="px-4 py-3 hidden lg:table-cell">Vật liệu</th>
-                  <th className="px-4 py-3">m³</th>
+                  <th className="px-4 py-3 text-right">Khối lượng (m³)</th>
                   <th className="px-4 py-3 hidden xl:table-cell">Điểm đổ</th>
                   <th className="px-4 py-3 text-center">Ảnh</th>
                   <th className="px-4 py-3 whitespace-nowrap">Giờ vào</th>
@@ -237,17 +238,29 @@ export default function TripsPage() {
                     <td className="px-4 py-3">
                       <span className="font-mono font-semibold text-slate-900 dark:text-white">{trip.vehicle?.plateNumber}</span>
                     </td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{trip.vehicle?.vehicleType || '-'}</span>
+                    </td>
                     <td className="px-4 py-3 hidden md:table-cell text-slate-600 dark:text-slate-300">{trip.driver?.fullName}</td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="inline-flex px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs">{trip.material?.name}</span>
                     </td>
-                    <td className="px-4 py-3 font-medium">
-                      <div>
-                        {Number(trip.volumeM3 || trip.actualVolume || trip.expectedVolume || 0).toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        {trip.calculationMethod === 'dimensions' && (
-                          <span title={`${trip.lengthM}×${trip.widthM}×${trip.heightM}`}><Ruler className="w-3 h-3 text-blue-400 inline-block ml-1" /></span>
-                        )}
-                      </div>
+                    <td className="px-4 py-3 text-right">
+                      {(() => {
+                        const vol = Number(trip.volumeM3 || trip.actualVolume || trip.expectedVolume || 0)
+                        if (vol <= 0) return <span className="text-slate-400 text-xs">—</span>
+                        return (
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-900/30 text-blue-300 font-bold text-sm tabular-nums">
+                              {vol.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                              <span className="text-blue-400/60 text-[10px] font-normal">m³</span>
+                            </span>
+                            {trip.calculationMethod === 'dimensions' && (
+                              <span title={`${trip.lengthM}×${trip.widthM}×${trip.heightM}`}><Ruler className="w-3 h-3 text-blue-400" /></span>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="px-4 py-3 hidden xl:table-cell text-slate-500 text-xs">{trip.dumpLocation?.name || '-'}</td>
                     <td className="px-4 py-3 text-center">

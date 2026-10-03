@@ -220,10 +220,11 @@ export default function UsersPage() {
               Vai trò <span className="text-red-500">*</span>
             </label>
             <select required value={formData.role} onChange={e => setFormData(p => ({...p, role: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all bg-white dark:bg-slate-800">
-              <option value="GATE_STAFF">Bảo vệ cổng (Gate Staff)</option>
-              <option value="SUPERVISOR">Giám sát (Supervisor)</option>
-              <option value="ACCOUNTANT">Kế toán (Accountant)</option>
-              <option value="ADMIN">Quản lý (Admin)</option>
+              <option value="GATE_STAFF">Nhân viên cổng</option>
+              <option value="SUPERVISOR">Giám sát</option>
+              <option value="ACCOUNTANT">Kế toán</option>
+              <option value="ADMIN">Quản lý</option>
+              <option value="DIRECTOR">Giám đốc</option>
               {user?.isSuperAdmin && <option value="SUPER_ADMIN">Quản trị tối cao (Super Admin)</option>}
             </select>
           </div>

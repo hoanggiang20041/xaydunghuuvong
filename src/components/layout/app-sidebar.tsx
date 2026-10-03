@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
   LayoutDashboard, Truck, MapPin, Route, Building2, Car, Users, Package,
-  MapPinned, CircleDot, BarChart3, UserCog, ScrollText, LogOut, ChevronLeft, Menu, Zap
+  MapPinned, CircleDot, BarChart3, UserCog, ScrollText, LogOut, ChevronLeft, Menu, Zap, Shield
 } from 'lucide-react'
 import { useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
@@ -32,6 +32,15 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Nhật ký', href: '/dashboard/audit-logs', icon: ScrollText, permission: 'audit.view' },
 ]
 
+const ROLE_DISPLAY: Record<string, { label: string; color: string; bg: string }> = {
+  SUPER_ADMIN: { label: 'Super Admin', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+  DIRECTOR: { label: 'Giám đốc', color: '#ecc94b', bg: 'rgba(236,201,75,0.15)' },
+  ADMIN: { label: 'Quản lý', color: '#60a5fa', bg: 'rgba(96,165,250,0.15)' },
+  SUPERVISOR: { label: 'Giám sát', color: '#34d399', bg: 'rgba(52,211,153,0.15)' },
+  GATE_STAFF: { label: 'NV Cổng', color: '#a78bfa', bg: 'rgba(167,139,250,0.15)' },
+  ACCOUNTANT: { label: 'Kế toán', color: '#fb923c', bg: 'rgba(251,146,60,0.15)' },
+}
+
 export function AppSidebar() {
   const { user, hasPermission, logout } = useAuth()
   const pathname = usePathname()
@@ -44,17 +53,20 @@ export function AppSidebar() {
     window.location.href = '/login'
   }
 
+  const roleName = user?.roles?.[0] || ''
+  const roleInfo = ROLE_DISPLAY[roleName] || { label: roleName, color: '#94a3b8', bg: 'rgba(148,163,184,0.15)' }
+
   const sidebarContent = (
-    <div className="flex flex-col h-full" style={{ background: '#1a365d' }}>
+    <div className="flex flex-col h-full" style={{ background: 'linear-gradient(180deg, #0f1b2d 0%, #1a365d 40%, #1e3a5f 100%)' }}>
       {/* Header */}
-      <div className="px-4 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+      <div className="px-4 py-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0 shadow" style={{ background: 'linear-gradient(135deg, #d69e2e 0%, #ecc94b 100%)' }}>
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #d69e2e 0%, #ecc94b 100%)' }}>
             <span className="text-sm font-black" style={{ color: '#1a365d', fontFamily: 'Georgia, serif' }}>HV</span>
           </div>
           {!collapsed && (
             <div>
-              <div className="text-xs font-bold text-white tracking-wider">HỮU VỌNG</div>
+              <div className="text-sm font-bold text-white tracking-wider">HỮU VỌNG</div>
               <div className="text-[10px] font-medium" style={{ color: '#d69e2e' }}>Quản lý Vận chuyển</div>
             </div>
           )}
@@ -62,64 +74,87 @@ export function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-2 overflow-y-auto">
+      <nav className="flex-1 py-3 overflow-y-auto">
         {NAV_ITEMS.map((item, i) => {
           if ('type' in item) {
             return !collapsed ? (
-              <div key={i} className="px-4 pt-4 pb-1">
-                <span className="text-[10px] font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>{item.label}</span>
+              <div key={i} className="px-4 pt-5 pb-2">
+                <span className="text-[10px] font-extrabold tracking-[0.2em] uppercase" style={{ color: 'rgba(255,255,255,0.25)' }}>{item.label}</span>
               </div>
-            ) : <div key={i} className="my-1 mx-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+            ) : <div key={i} className="my-2 mx-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
           }
 
           if (item.permission && !hasPermission(item.permission)) return null
 
           const Icon = item.icon
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href))
+          const isQuickAction = item.href === '/dashboard/quick-action'
 
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 mx-2 px-3 py-2 rounded text-sm transition-all ${
+              className={`flex items-center gap-3 mx-2 px-3 py-2.5 rounded-lg text-sm transition-all ${
                 isActive
-                  ? 'text-white font-semibold'
-                  : 'text-gray-300 hover:text-white'
+                  ? 'text-white font-bold'
+                  : isQuickAction
+                    ? 'text-amber-300 hover:text-amber-200 font-semibold'
+                    : 'text-gray-300/80 hover:text-white'
               }`}
               style={{
-                background: isActive ? 'rgba(255,255,255,0.12)' : 'transparent',
-                borderLeft: isActive ? '3px solid #d69e2e' : '3px solid transparent',
+                background: isActive 
+                  ? 'linear-gradient(90deg, rgba(214,158,46,0.2) 0%, rgba(255,255,255,0.08) 100%)' 
+                  : isQuickAction && !isActive
+                    ? 'rgba(214,158,46,0.08)'
+                    : 'transparent',
+                borderLeft: isActive ? '3px solid #ecc94b' : '3px solid transparent',
               }}
             >
-              {Icon && <Icon className="w-4 h-4 flex-shrink-0" style={{ color: isActive ? '#ecc94b' : 'rgba(255,255,255,0.5)' }} />}
-              {!collapsed && <span>{item.label}</span>}
+              {Icon && (
+                <Icon 
+                  className={`w-[18px] h-[18px] flex-shrink-0 ${isQuickAction && !isActive ? 'animate-pulse' : ''}`} 
+                  style={{ color: isActive ? '#ecc94b' : isQuickAction ? '#d69e2e' : 'rgba(255,255,255,0.4)' }} 
+                />
+              )}
+              {!collapsed && (
+                <span className={isQuickAction && !isActive ? 'flex items-center gap-2' : ''}>
+                  {item.label}
+                  {isQuickAction && !isActive && (
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-500/20 text-amber-400">HOT</span>
+                  )}
+                </span>
+              )}
             </Link>
           )
         })}
       </nav>
 
       {/* User info & Logout */}
-      <div className="border-t px-3 py-3" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+      <div className="border-t px-3 py-3" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
         {!collapsed && user && (
-          <div className="mb-2 px-2">
-            <div className="text-sm font-medium text-white truncate">{user.fullName}</div>
-            <div className="text-[11px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              {user.roles?.[0] === 'SUPER_ADMIN' ? 'Quản trị viên' :
-               user.roles?.[0] === 'DIRECTOR' ? 'Giám đốc' :
-               user.roles?.[0] === 'ADMIN' ? 'Quản lý' :
-               user.roles?.[0] === 'SUPERVISOR' ? 'Giám sát' :
-               user.roles?.[0] === 'GATE_STAFF' ? 'NV Cổng' :
-               user.roles?.[0] === 'ACCOUNTANT' ? 'Kế toán' : user.roles?.[0]}
+          <div className="mb-3 mx-1 p-3 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ background: roleInfo.color }}>
+                {user.fullName?.charAt(0)?.toUpperCase() || 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-white truncate">{user.fullName}</div>
+                <span 
+                  className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold"
+                  style={{ color: roleInfo.color, background: roleInfo.bg }}
+                >
+                  <Shield className="w-2.5 h-2.5" />
+                  {roleInfo.label}
+                </span>
+              </div>
             </div>
           </div>
         )}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded text-sm transition"
-          style={{ color: 'rgba(255,255,255,0.6)', background: 'transparent' }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition hover:bg-red-500/10"
+          style={{ color: 'rgba(255,255,255,0.5)' }}
         >
           <LogOut className="w-4 h-4" />
           {!collapsed && <span>Đăng xuất</span>}
@@ -129,10 +164,10 @@ export function AppSidebar() {
       {/* Collapse toggle - desktop only */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="hidden lg:flex items-center justify-center py-2 border-t transition"
-        style={{ borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
+        className="hidden lg:flex items-center justify-center py-2.5 border-t transition"
+        style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.3)' }}
         onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
-        onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+        onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
       >
         <ChevronLeft className={`w-4 h-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
       </button>
@@ -144,7 +179,7 @@ export function AppSidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3 left-3 z-50 p-2 rounded"
+        className="lg:hidden fixed top-3 left-3 z-50 p-2.5 rounded-lg shadow-lg"
         style={{ background: '#1a365d', color: 'white' }}
       >
         <Menu className="w-5 h-5" />
@@ -153,8 +188,8 @@ export function AppSidebar() {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <div className="relative w-64 h-full">{sidebarContent}</div>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <div className="relative w-64 h-full shadow-2xl">{sidebarContent}</div>
         </div>
       )}
 
