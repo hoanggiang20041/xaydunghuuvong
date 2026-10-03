@@ -110,6 +110,16 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data
+    
+    let expectedVolume = data.expectedVolume
+    let volumeM3 = data.volumeM3
+
+    if (data.calculationMethod === 'dimensions' && data.lengthM !== undefined && data.widthM !== undefined && data.heightM !== undefined && data.lengthM !== null && data.widthM !== null && data.heightM !== null) {
+      volumeM3 = data.lengthM * data.widthM * data.heightM
+      expectedVolume = volumeM3
+    } else if (data.calculationMethod === 'manual' && data.volumeM3 !== undefined && data.volumeM3 !== null) {
+      expectedVolume = data.volumeM3
+    }
 
     // Check project access
     if (!hasProjectAccess(user, data.projectId)) {
@@ -177,7 +187,12 @@ export async function POST(request: NextRequest) {
           materialId: data.materialId,
           pickupLocationId: data.pickupLocationId,
           dumpLocationId: data.dumpLocationId,
-          expectedVolume: data.expectedVolume,
+          expectedVolume: expectedVolume,
+          lengthM: data.lengthM,
+          widthM: data.widthM,
+          heightM: data.heightM,
+          volumeM3: volumeM3,
+          calculationMethod: data.calculationMethod,
           checkInPhotoUrl: data.checkInPhotoUrl,
           checkInAt: new Date(), // Server timestamp
           status: 'CHECKED_IN',

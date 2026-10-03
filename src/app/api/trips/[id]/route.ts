@@ -269,7 +269,7 @@ async function handleCancel(trip: any, body: any, user: any) {
 async function handleUpdateInfo(trip: any, body: any, user: any) {
   if (!hasPermission(user, PERMISSIONS.TRIPS_UPDATE)) return forbiddenResponse()
 
-  const { projectId, materialId, vehicleId, pickupLocationId, driverId, dumpLocationId, expectedVolume, actualVolume, notes } = body
+  const { projectId, materialId, vehicleId, pickupLocationId, driverId, dumpLocationId, expectedVolume, actualVolume, notes, lengthM, widthM, heightM, volumeM3, calculationMethod } = body
   
   const updated = await prisma.$transaction(async (tx) => {
     const updatedTrip = await tx.trip.update({
@@ -283,6 +283,11 @@ async function handleUpdateInfo(trip: any, body: any, user: any) {
         ...(dumpLocationId !== undefined && { dumpLocationId }),
         ...(expectedVolume !== undefined && { expectedVolume: Number(expectedVolume) || null }),
         ...(actualVolume !== undefined && { actualVolume: Number(actualVolume) || null }),
+        ...(lengthM !== undefined && { lengthM }),
+        ...(widthM !== undefined && { widthM }),
+        ...(heightM !== undefined && { heightM }),
+        ...(volumeM3 !== undefined && { volumeM3 }),
+        ...(calculationMethod !== undefined && { calculationMethod }),
         ...(notes !== undefined && { notes }),
         version: { increment: 1 },
       },

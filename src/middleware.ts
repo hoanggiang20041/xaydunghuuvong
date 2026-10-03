@@ -22,81 +22,111 @@ export async function middleware(request: NextRequest) {
     return addSecurityHeaders(NextResponse.next())
   }
 
+  const accessToken = request.cookies.get('access_token')?.value
+  const refreshToken = request.cookies.get('refresh_token')?.value
+
   // Check authentication for API routes
   if (pathname.startsWith('/api/')) {
-    const accessToken = request.cookies.get('access_token')?.value
-    
-    if (!accessToken) {
+    if (!accessToken && !refreshToken) {
       return NextResponse.json(
         { success: false, error: { code: 'UNAUTHORIZED', message: 'Vui lòng đăng nhập' } },
         { status: 401 }
       )
     }
 
-    // Verify access token
-    try {
-      await jwtVerify(accessToken, JWT_SECRET)
-      return addSecurityHeaders(NextResponse.next())
-    } catch {
-      // Access token expired, try refresh
-      const refreshToken = request.cookies.get('refresh_token')?.value
-      if (refreshToken) {
-        try {
-          const { payload } = await jwtVerify(refreshToken, JWT_REFRESH_SECRET)
-          
-          // Create new access token
-          const newAccessToken = await new SignJWT({ 
-            userId: payload.userId, 
-            username: payload.username, 
-            email: payload.email 
-          })
-            .setProtectedHeader({ alg: 'HS256' })
-            .setIssuedAt()
-            .setExpirationTime('15m')
-            .sign(JWT_SECRET)
-          
-          const response = NextResponse.next()
-          response.cookies.set('access_token', newAccessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge: 15 * 60,
-          })
-          return addSecurityHeaders(response)
-        } catch {
-          // Refresh token also invalid
-        }
-      }
-      
-      return NextResponse.json(
-        { success: false, error: { code: 'TOKEN_EXPIRED', message: 'Phiên đăng nhập hết hạn' } },
-        { status: 401 }
-      )
-    }
-  }
-
-  // Check authentication for dashboard pages
-  if (pathname.startsWith('/dashboard')) {
-    const accessToken = request.cookies.get('access_token')?.value
-    const refreshToken = request.cookies.get('refresh_token')?.value
-    
-    if (!accessToken && !refreshToken) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-
+    // Try access token first
     if (accessToken) {
       try {
         await jwtVerify(accessToken, JWT_SECRET)
         return addSecurityHeaders(NextResponse.next())
       } catch {
-        if (!refreshToken) {
-          return NextResponse.redirect(new URL('/login', request.url))
-        }
+        // Access token expired, fall through to refresh
       }
     }
 
-    return addSecurityHeaders(NextResponse.next())
+    // Try refresh token
+    if (refreshToken) {
+      try {
+        const { payload } = await jwtVerify(refreshToken, JWT_REFRESH_SECRET)
+        
+        // Create new access token
+        const newAccessToken = await new SignJWT({ 
+          userId: payload.userId, 
+          username: payload.username, 
+          email: payload.email 
+        })
+          .setProtectedHeader({ alg: 'HS256' })
+          .setIssuedAt()
+          .setExpirationTime('1h')
+          .sign(JWT_SECRET)
+        
+        const response = NextResponse.next()
+        response.cookies.set('access_token', newAccessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60,
+        })
+        return addSecurityHeaders(response)
+      } catch {
+        // Refresh token also invalid
+      }
+    }
+    
+    return NextResponse.json(
+      { success: false, error: { code: 'TOKEN_EXPIRED', message: 'Phiên đăng nhập hết hạn' } },
+      { status: 401 }
+    )
+  }
+
+  // Check authentication for dashboard pages
+  if (pathname.startsWith('/dashboard')) {
+    if (!accessToken && !refreshToken) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    // Try access token
+    if (accessToken) {
+      try {
+        await jwtVerify(accessToken, JWT_SECRET)
+        return addSecurityHeaders(NextResponse.next())
+      } catch {
+        // expired, try refresh below
+      }
+    }
+
+    // Try refresh token — FIX: was missing this refresh logic for dashboard pages
+    if (refreshToken) {
+      try {
+        const { payload } = await jwtVerify(refreshToken, JWT_REFRESH_SECRET)
+        
+        const newAccessToken = await new SignJWT({ 
+          userId: payload.userId, 
+          username: payload.username, 
+          email: payload.email 
+        })
+          .setProtectedHeader({ alg: 'HS256' })
+          .setIssuedAt()
+          .setExpirationTime('1h')
+          .sign(JWT_SECRET)
+        
+        const response = NextResponse.next()
+        response.cookies.set('access_token', newAccessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 60 * 60,
+        })
+        return addSecurityHeaders(response)
+      } catch {
+        // Both tokens invalid — redirect to login
+        return NextResponse.redirect(new URL('/login', request.url))
+      }
+    }
+
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   return addSecurityHeaders(NextResponse.next())

@@ -5,7 +5,8 @@ import { prisma } from './prisma'
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-dev-secret-change-in-production')
 const JWT_REFRESH_SECRET = new TextEncoder().encode(process.env.JWT_REFRESH_SECRET || 'fallback-dev-refresh-secret')
 
-const ACCESS_TOKEN_EXPIRY = process.env.JWT_EXPIRY || '15m'
+// Increased from 15m to 1h to reduce frequency of token refresh
+const ACCESS_TOKEN_EXPIRY = process.env.JWT_EXPIRY || '1h'
 const REFRESH_TOKEN_EXPIRY = process.env.JWT_REFRESH_EXPIRY || '7d'
 
 export interface TokenPayload extends JWTPayload {
@@ -56,7 +57,7 @@ export async function setAuthCookies(accessToken: string, refreshToken: string) 
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 15 * 60, // 15 minutes
+    maxAge: 60 * 60, // 1 hour (matches ACCESS_TOKEN_EXPIRY)
   })
 
   cookieStore.set('refresh_token', refreshToken, {
@@ -74,13 +75,48 @@ export async function clearAuthCookies() {
   cookieStore.delete('refresh_token')
 }
 
+/**
+ * Get auth payload from cookies.
+ * First tries access token. If expired, automatically tries refresh token
+ * to create a new access token — fixing the session logout bug.
+ */
 export async function getAuthFromCookies(): Promise<TokenPayload | null> {
   const cookieStore = await cookies()
   const accessToken = cookieStore.get('access_token')?.value
   
-  if (!accessToken) return null
+  // Try access token first
+  if (accessToken) {
+    const payload = await verifyAccessToken(accessToken)
+    if (payload) return payload
+  }
   
-  return verifyAccessToken(accessToken)
+  // Access token missing or expired — try refresh token
+  const refreshToken = cookieStore.get('refresh_token')?.value
+  if (!refreshToken) return null
+  
+  const refreshPayload = await verifyRefreshToken(refreshToken)
+  if (!refreshPayload) return null
+  
+  // Refresh token valid — create new access token and set cookie
+  try {
+    const newAccessToken = await createAccessToken({
+      userId: refreshPayload.userId,
+      username: refreshPayload.username,
+      email: refreshPayload.email,
+    })
+    
+    cookieStore.set('access_token', newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60,
+    })
+    
+    return refreshPayload
+  } catch {
+    return null
+  }
 }
 
 export async function getCurrentUser() {

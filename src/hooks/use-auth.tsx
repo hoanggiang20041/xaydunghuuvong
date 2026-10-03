@@ -2,11 +2,6 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 
-interface UserRole {
-  name: string
-  displayName: string
-}
-
 interface AuthUser {
   id: string
   username: string
@@ -35,20 +30,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (retryCount = 0) => {
     try {
       const res = await fetch('/api/auth/me')
       if (res.ok) {
         const data = await res.json()
         if (data.success && data.data?.user) {
           setUser(data.data.user)
-        } else {
-          setUser(null)
+          return
         }
-      } else {
-        setUser(null)
       }
+      
+      // If 401 and this is first attempt, retry once after a short delay
+      // This handles the case where middleware just refreshed the access token
+      if (res.status === 401 && retryCount === 0) {
+        await new Promise(resolve => setTimeout(resolve, 300))
+        return refreshUser(1)
+      }
+      
+      setUser(null)
     } catch {
+      // Network error — retry once
+      if (retryCount === 0) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+        return refreshUser(1)
+      }
       setUser(null)
     } finally {
       setLoading(false)

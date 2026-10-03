@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
           ...dateFilter,
           status: { in: ['COMPLETED', 'CHECKED_OUT'] },
         } as any,
-        _sum: { actualVolume: true, expectedVolume: true },
+        _sum: { actualVolume: true, expectedVolume: true, volumeM3: true },
         _count: true,
       }),
       
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
           ...dateFilter,
           status: { in: ['COMPLETED', 'CHECKED_OUT'] },
         } as any,
-        _sum: { actualVolume: true, expectedVolume: true },
+        _sum: { actualVolume: true, expectedVolume: true, volumeM3: true },
       }),
     ])
 
@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
       return {
         name: mat.name,
         total: Number(mv._sum.actualVolume || mv._sum.expectedVolume || 0),
+        volumeM3: Number(mv._sum.volumeM3 || 0),
         unit: mat.unit,
       }
     })
@@ -151,6 +152,7 @@ export async function GET(request: NextRequest) {
       completedTrips: completedCount,
       onsiteVehicles: onsiteCount,
       totalVolume: Number(totalVolume._sum.actualVolume || totalVolume._sum.expectedVolume || 0),
+      totalVolumeM3: Number(totalVolume._sum.volumeM3 || 0),
       todayTrips: checkedInCount,
       volumeByMaterial,
     })

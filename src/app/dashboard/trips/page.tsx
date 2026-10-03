@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from '@/components/ui/toaster'
 import { TRIP_STATUS_LABELS, TRIP_STATUS_COLORS } from '@/lib/constants'
-import { Route, Search, Filter, Loader2, Eye, Clock, Camera, X, Edit2, Trash2, Zap } from 'lucide-react'
+import { Route, Search, Filter, Loader2, Eye, Clock, Camera, X, Edit2, Trash2, Zap, Info, Ruler } from 'lucide-react'
 import Link from 'next/link'
 import { Modal } from '@/components/ui/modal'
 
@@ -20,6 +20,7 @@ export default function TripsPage() {
   const [total, setTotal] = useState(0)
   const [viewImage, setViewImage] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [detailTrip, setDetailTrip] = useState<any>(null)
 
   // Edit logic
   const [editTrip, setEditTrip] = useState<any>(null)
@@ -146,7 +147,7 @@ export default function TripsPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, status, page])
+  }, [search, status, date, page])
 
   useEffect(() => { fetchTrips() }, [fetchTrips])
 
@@ -208,6 +209,7 @@ export default function TripsPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 dark:bg-slate-800/50">
                 <tr className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 w-12">STT</th>
                   <th className="px-4 py-3">Mã chuyến</th>
                   <th className="px-4 py-3">Biển số</th>
                   <th className="px-4 py-3 hidden md:table-cell">Tài xế</th>
@@ -222,8 +224,9 @@ export default function TripsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {trips.map((trip: any) => (
-                  <tr key={trip.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                {trips.map((trip: any, index: number) => (
+                  <tr key={trip.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition cursor-pointer" onClick={() => setDetailTrip(trip)}>
+                    <td className="px-4 py-3 text-xs text-slate-400">{(page - 1) * 20 + index + 1}</td>
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs text-slate-600 dark:text-slate-300">{trip.tripCode}</span>
                     </td>
@@ -234,7 +237,14 @@ export default function TripsPage() {
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="inline-flex px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs">{trip.material?.name}</span>
                     </td>
-                    <td className="px-4 py-3 font-medium">{Number(trip.actualVolume || trip.expectedVolume || 0).toLocaleString('vi-VN')}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <div>
+                        {Number(trip.volumeM3 || trip.actualVolume || trip.expectedVolume || 0).toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {trip.calculationMethod === 'dimensions' && (
+                          <span title={`${trip.lengthM}×${trip.widthM}×${trip.heightM}`}><Ruler className="w-3 h-3 text-blue-400 inline-block ml-1" /></span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 hidden xl:table-cell text-slate-500 text-xs">{trip.dumpLocation?.name || '-'}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex justify-center gap-1">
@@ -263,12 +273,12 @@ export default function TripsPage() {
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       {hasPermission('trips.update') && (
-                        <button onClick={() => handleOpenEdit(trip)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Bổ sung thông tin">
+                        <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(trip) }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Bổ sung thông tin">
                           <Edit2 className="w-4 h-4" />
                         </button>
                       )}
                       {hasPermission('trips.delete') && (
-                        <button onClick={() => setDeleteId(trip.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors ml-1" title="Xóa chuyến">
+                        <button onClick={(e) => { e.stopPropagation(); setDeleteId(trip.id) }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors ml-1" title="Xóa chuyến">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
@@ -399,6 +409,152 @@ export default function TripsPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Trip Detail Modal */}
+      <Modal isOpen={!!detailTrip} onClose={() => setDetailTrip(null)} title={`Chi tiết chuyến: ${detailTrip?.tripCode || ''}`}>
+        {detailTrip && (
+          <div className="space-y-4">
+            {/* Basic Info */}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+                <span className="text-slate-500 text-xs block">Biển số</span>
+                <span className="font-bold text-slate-900 dark:text-white">{detailTrip.vehicle?.plateNumber}</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+                <span className="text-slate-500 text-xs block">Tài xế</span>
+                <span className="font-medium text-slate-900 dark:text-white">{detailTrip.driver?.fullName || 'Không rõ'}</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+                <span className="text-slate-500 text-xs block">Công trình</span>
+                <span className="font-medium text-slate-900 dark:text-white">{detailTrip.project?.name}</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+                <span className="text-slate-500 text-xs block">Vật liệu</span>
+                <span className="font-medium text-slate-900 dark:text-white">{detailTrip.material?.name}</span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+                <span className="text-slate-500 text-xs block">Giờ vào</span>
+                <span className="font-medium text-slate-900 dark:text-white">
+                  {detailTrip.checkInAt ? new Date(detailTrip.checkInAt).toLocaleString('vi-VN') : '-'}
+                </span>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+                <span className="text-slate-500 text-xs block">Giờ ra</span>
+                <span className="font-medium text-slate-900 dark:text-white">
+                  {detailTrip.checkOutAt ? new Date(detailTrip.checkOutAt).toLocaleString('vi-VN') : '-'}
+                </span>
+              </div>
+              {detailTrip.dumpLocation && (
+                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+                  <span className="text-slate-500 text-xs block">Điểm đổ</span>
+                  <span className="font-medium text-slate-900 dark:text-white">{detailTrip.dumpLocation.name}</span>
+                </div>
+              )}
+              {detailTrip.pickupLocation && (
+                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+                  <span className="text-slate-500 text-xs block">Điểm lấy hàng</span>
+                  <span className="font-medium text-slate-900 dark:text-white">{detailTrip.pickupLocation.name}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Volume / Dimensions */}
+            <div className="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+              <h4 className="text-sm font-bold text-blue-900 dark:text-blue-200 mb-3 flex items-center gap-2">
+                <Ruler className="w-4 h-4" /> Thông tin khối lượng
+              </h4>
+              {detailTrip.calculationMethod === 'dimensions' && detailTrip.lengthM && detailTrip.widthM && detailTrip.heightM ? (
+                <div className="space-y-2">
+                  <div className="text-xs text-slate-600 dark:text-slate-400">
+                    Phương pháp: <span className="font-medium">Tính theo kích thước</span>
+                  </div>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      <tr className="border-b border-blue-100 dark:border-blue-800">
+                        <td className="py-1.5 text-slate-600 dark:text-slate-400">Dài</td>
+                        <td className="py-1.5 text-right font-medium">{Number(detailTrip.lengthM).toFixed(2)} m</td>
+                      </tr>
+                      <tr className="border-b border-blue-100 dark:border-blue-800">
+                        <td className="py-1.5 text-slate-600 dark:text-slate-400">Rộng</td>
+                        <td className="py-1.5 text-right font-medium">{Number(detailTrip.widthM).toFixed(2)} m</td>
+                      </tr>
+                      <tr className="border-b border-blue-100 dark:border-blue-800">
+                        <td className="py-1.5 text-slate-600 dark:text-slate-400">Cao</td>
+                        <td className="py-1.5 text-right font-medium">{Number(detailTrip.heightM).toFixed(2)} m</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div className="text-xs text-slate-500 pt-1">
+                    {Number(detailTrip.lengthM).toFixed(2)} × {Number(detailTrip.widthM).toFixed(2)} × {Number(detailTrip.heightM).toFixed(2)} =
+                  </div>
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                    {Number(detailTrip.volumeM3 || 0).toFixed(2)} m³
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">
+                    Phương pháp: <span className="font-medium">Nhập trực tiếp</span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                    {Number(detailTrip.volumeM3 || detailTrip.actualVolume || detailTrip.expectedVolume || 0).toFixed(2)} m³
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Photos */}
+            {(detailTrip.checkInPhotoUrl || detailTrip.checkOutPhotoUrl) && (
+              <div className="grid grid-cols-2 gap-3">
+                {detailTrip.checkInPhotoUrl && (
+                  <div>
+                    <span className="text-xs text-slate-500 block mb-1">Ảnh vào</span>
+                    <img 
+                      src={detailTrip.checkInPhotoUrl} 
+                      alt="Ảnh vào" 
+                      className="w-full h-32 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition" 
+                      onClick={() => setViewImage(detailTrip.checkInPhotoUrl)}
+                    />
+                  </div>
+                )}
+                {detailTrip.checkOutPhotoUrl && (
+                  <div>
+                    <span className="text-xs text-slate-500 block mb-1">Ảnh ra</span>
+                    <img 
+                      src={detailTrip.checkOutPhotoUrl} 
+                      alt="Ảnh ra" 
+                      className="w-full h-32 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition" 
+                      onClick={() => setViewImage(detailTrip.checkOutPhotoUrl)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Notes */}
+            {detailTrip.notes && (
+              <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg">
+                <span className="text-slate-500 text-xs block">Ghi chú</span>
+                <p className="text-sm text-slate-700 dark:text-slate-200 mt-1">{detailTrip.notes}</p>
+              </div>
+            )}
+
+            {/* Status */}
+            <div className="flex items-center justify-between pt-2 border-t">
+              <span className={`inline-flex px-3 py-1.5 rounded-full text-xs font-medium ${TRIP_STATUS_COLORS[detailTrip.status] || ''}`}>
+                {TRIP_STATUS_LABELS[detailTrip.status] || detailTrip.status}
+              </span>
+              <div className="flex gap-2">
+                {hasPermission('trips.update') && (
+                  <button onClick={() => { setDetailTrip(null); handleOpenEdit(detailTrip) }} className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition">
+                    Bổ sung thông tin
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

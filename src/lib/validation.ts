@@ -139,6 +139,11 @@ export const createTripSchema = z.object({
   pickupLocationId: z.string().uuid().optional().nullable(),
   dumpLocationId: z.string().uuid().optional().nullable(),
   expectedVolume: z.number().positive('Số khối phải lớn hơn 0').optional().nullable(),
+  lengthM: z.number().positive('Chiều dài phải lớn hơn 0').optional().nullable(),
+  widthM: z.number().positive('Chiều rộng phải lớn hơn 0').optional().nullable(),
+  heightM: z.number().positive('Chiều cao phải lớn hơn 0').optional().nullable(),
+  volumeM3: z.number().positive('Khối lượng phải lớn hơn 0').optional().nullable(),
+  calculationMethod: z.enum(['dimensions', 'manual']).optional().nullable(),
   checkInPhotoUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 }).refine(data => data.vehicleId || data.plateNumber, {
@@ -148,6 +153,11 @@ export const createTripSchema = z.object({
 
 export const checkOutTripSchema = z.object({
   actualVolume: z.number().positive('Số khối thực tế phải lớn hơn 0').optional().nullable(),
+  lengthM: z.number().positive('Chiều dài phải lớn hơn 0').optional().nullable(),
+  widthM: z.number().positive('Chiều rộng phải lớn hơn 0').optional().nullable(),
+  heightM: z.number().positive('Chiều cao phải lớn hơn 0').optional().nullable(),
+  volumeM3: z.number().positive('Khối lượng phải lớn hơn 0').optional().nullable(),
+  calculationMethod: z.enum(['dimensions', 'manual']).optional().nullable(),
   checkOutPhotoUrl: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 })
