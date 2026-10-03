@@ -211,6 +211,7 @@ export default function TripsPage() {
                 <tr className="text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   <th className="px-4 py-3 w-12">STT</th>
                   <th className="px-4 py-3">Mã chuyến</th>
+                  <th className="px-4 py-3">Công trình</th>
                   <th className="px-4 py-3">Biển số</th>
                   <th className="px-4 py-3 hidden md:table-cell">Tài xế</th>
                   <th className="px-4 py-3 hidden lg:table-cell">Vật liệu</th>
@@ -229,6 +230,9 @@ export default function TripsPage() {
                     <td className="px-4 py-3 text-xs text-slate-400">{(page - 1) * 20 + index + 1}</td>
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs text-slate-600 dark:text-slate-300">{trip.tripCode}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs text-slate-600 dark:text-slate-300">{trip.project?.name || '-'}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-mono font-semibold text-slate-900 dark:text-white">{trip.vehicle?.plateNumber}</span>

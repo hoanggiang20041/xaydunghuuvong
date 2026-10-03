@@ -74,7 +74,7 @@ async function main() {
   const rolePermMap: Record<string, string[]> = {
     SUPER_ADMIN: allPermissions.map(p => p.code),
     ADMIN: [
-      'users.view', 'users.create', 'users.update',
+      'users.view',
       'projects.view', 'projects.create', 'projects.update',
       'vehicles.view', 'vehicles.create', 'vehicles.update',
       'drivers.view', 'drivers.create', 'drivers.update',
@@ -88,11 +88,11 @@ async function main() {
     SUPERVISOR: [
       'projects.view',
       'vehicles.view',
-      'drivers.view', 'drivers.create', 'drivers.update',
+      'drivers.view',
       'materials.view',
       'locations.view',
       'trips.view', 'trips.create', 'trips.update', 'trips.check_in', 'trips.check_out',
-      'trips.complete', 'trips.cancel', 'trips.approve_edit', 'trips.export',
+      'trips.complete', 'trips.approve_edit', 'trips.export',
       'reports.view', 'reports.export',
       'notifications.view',
     ],
@@ -102,7 +102,7 @@ async function main() {
       'drivers.view',
       'materials.view',
       'locations.view',
-      'trips.view', 'trips.create', 'trips.check_in', 'trips.check_out',
+      'trips.view', 'trips.check_in', 'trips.check_out',
       'notifications.view',
     ],
     ACCOUNTANT: [
