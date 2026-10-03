@@ -168,7 +168,7 @@ export default function LoginPage() {
           </form>
           
           <div className="mt-8 text-center text-xs text-slate-500">
-            &copy; {new Date().getFullYear()} Công Ty TNHH Hữu Vọng. Đã đăng ký bản quyền.
+            Phát triển bởi Nguyễn Hoàng Giang
           </div>
         </div>
       </div>

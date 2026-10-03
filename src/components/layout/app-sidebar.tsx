@@ -77,12 +77,28 @@ export function AppSidebar() {
       <nav className="flex-1 py-3 overflow-y-auto">
         {NAV_ITEMS.map((item, i) => {
           if ('type' in item) {
+            // Hide "DANH MỤC" and "HỆ THỐNG" dividers for GATE_STAFF
+            if (roleName === 'GATE_STAFF' && (item.label === 'DANH MỤC' || item.label === 'HỆ THỐNG')) return null
+            // Hide "DANH MỤC" divider for ACCOUNTANT
+            if (roleName === 'ACCOUNTANT' && item.label === 'DANH MỤC') return null
+            // Hide "DANH MỤC" for DIRECTOR
+            if (roleName === 'DIRECTOR' && item.label === 'DANH MỤC') return null
+
             return !collapsed ? (
               <div key={i} className="px-4 pt-5 pb-2">
                 <span className="text-[10px] font-extrabold tracking-[0.2em] uppercase" style={{ color: 'rgba(255,255,255,0.25)' }}>{item.label}</span>
               </div>
             ) : <div key={i} className="my-2 mx-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }} />
           }
+
+          // Special UI hiding logic (keep backend permissions intact)
+          if (roleName === 'GATE_STAFF' && ['projects.view', 'vehicles.view', 'drivers.view', 'materials.view', 'locations.view', 'reports.view', 'users.view', 'audit.view'].includes(item.permission || '')) return null
+          
+          if (roleName === 'ACCOUNTANT' && ['projects.view', 'vehicles.view', 'drivers.view', 'materials.view', 'locations.view'].includes(item.permission || '')) return null
+
+          if (roleName === 'DIRECTOR' && ['vehicles.view', 'drivers.view', 'materials.view', 'locations.view'].includes(item.permission || '')) return null
+
+          if (roleName === 'SUPERVISOR' && ['projects.view', 'vehicles.view', 'drivers.view', 'materials.view', 'locations.view'].includes(item.permission || '')) return null
 
           if (item.permission && !hasPermission(item.permission)) return null
 
