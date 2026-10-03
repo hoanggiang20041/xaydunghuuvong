@@ -15,7 +15,7 @@ export default function VehiclesPage() {
   
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({ plateNumber: '', vehicleType: 'Xe ben', volumeCapacity: '', ownerName: '', phone: '' })
+  const [formData, setFormData] = useState({ plateNumber: '', vehicleType: 'Xe chở Đất', volumeCapacity: '', ownerName: '', phone: '' })
   const [submitting, setSubmitting] = useState(false)
 
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -38,7 +38,7 @@ export default function VehiclesPage() {
 
   const handleOpenAdd = () => {
     setEditingId(null)
-    setFormData({ plateNumber: '', vehicleType: 'Xe ben', volumeCapacity: '', ownerName: '', phone: '' })
+    setFormData({ plateNumber: '', vehicleType: 'Xe chở Đất', volumeCapacity: '', ownerName: '', phone: '' })
     setIsModalOpen(true)
   }
 
@@ -46,7 +46,7 @@ export default function VehiclesPage() {
     setEditingId(v.id)
     setFormData({ 
       plateNumber: v.plateNumber, 
-      vehicleType: v.vehicleType || 'Xe ben', 
+      vehicleType: v.vehicleType || 'Xe chở Đất', 
       volumeCapacity: v.volumeCapacity ? String(v.volumeCapacity) : '', 
       ownerName: v.ownerName || '', 
       phone: v.phone || '' 
@@ -179,9 +179,14 @@ export default function VehiclesPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Loại xe</label>
+            <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">Loại xe (xe chở gì) <span className="text-red-500">*</span></label>
             <select value={formData.vehicleType} onChange={e => setFormData(p => ({...p, vehicleType: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg dark:bg-slate-800 dark:border-slate-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all bg-white dark:bg-slate-800">
-              <option>Xe ben</option><option>Xe tải</option><option>Xe đầu kéo</option><option>Xe bồn</option><option>Khác</option>
+              <option value="Xe chở Đất">Xe chở Đất</option>
+              <option value="Xe chở Cát">Xe chở Cát</option>
+              <option value="Xe chở Đá">Xe chở Đá</option>
+              <option value="Xe chở Xà bần">Xe chở Xà bần</option>
+              <option value="Xe chở VLXD">Xe chở Vật liệu xây dựng</option>
+              <option value="Xe chở Khác">Xe chở Khác</option>
             </select>
           </div>
           <div>

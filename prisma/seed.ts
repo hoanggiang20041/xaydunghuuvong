@@ -248,11 +248,11 @@ async function main() {
   console.log('🚛 Creating sample vehicles...')
 
   const vehicles = [
-    { plateNumber: '51D-123.45', vehicleType: 'Xe ben', volumeCapacity: 12, ownerName: 'Nguyễn Văn A' },
-    { plateNumber: '51D-678.90', vehicleType: 'Xe ben', volumeCapacity: 15, ownerName: 'Trần Văn B' },
-    { plateNumber: '61C-111.22', vehicleType: 'Xe tải', volumeCapacity: 10, ownerName: 'Công ty Vận tải C' },
-    { plateNumber: '62D-333.44', vehicleType: 'Xe ben', volumeCapacity: 18, ownerName: 'Lê Văn D' },
-    { plateNumber: '51H-555.66', vehicleType: 'Xe đầu kéo', volumeCapacity: 25, ownerName: 'Công ty E' },
+    { plateNumber: '51D-123.45', vehicleType: 'Xe chở Đất', volumeCapacity: 12, ownerName: 'Nguyễn Văn A' },
+    { plateNumber: '51D-678.90', vehicleType: 'Xe chở Cát', volumeCapacity: 15, ownerName: 'Trần Văn B' },
+    { plateNumber: '61C-111.22', vehicleType: 'Xe chở Đá', volumeCapacity: 10, ownerName: 'Công ty Vận tải C' },
+    { plateNumber: '62D-333.44', vehicleType: 'Xe chở Đất', volumeCapacity: 18, ownerName: 'Lê Văn D' },
+    { plateNumber: '51H-555.66', vehicleType: 'Xe chở Xà bần', volumeCapacity: 25, ownerName: 'Công ty E' },
   ]
 
   for (const v of vehicles) {

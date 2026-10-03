@@ -1,11 +1,21 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/components/ui/toaster'
-import { Camera, ArrowRightToLine, ArrowLeftFromLine, Loader2, Search, Calculator, CheckSquare } from 'lucide-react'
+import { Camera, ArrowRightToLine, ArrowLeftFromLine, Loader2, Search, Truck, CheckCircle2, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { normalizePlateNumber } from '@/lib/plate-utils'
+
+// Map vehicle type to material name for auto-selection
+const VEHICLE_TYPE_TO_MATERIAL: Record<string, string> = {
+  'Xe chở Đất': 'Đất',
+  'Xe chở Cát': 'Cát',
+  'Xe chở Đá': 'Đá',
+  'Xe chở Xà bần': 'Xà bần',
+  'Xe chở VLXD': 'Vật liệu xây dựng',
+  'Xe chở Khác': '',
+}
 
 export default function QuickActionPage() {
   const router = useRouter()
@@ -18,24 +28,32 @@ export default function QuickActionPage() {
   const [projects, setProjects] = useState<any[]>([])
   const [selectedProject, setSelectedProject] = useState('')
   
-  // Volume calculation states
-  const [calculationMethod, setCalculationMethod] = useState<'manual' | 'dimensions'>('manual')
-  const [expectedVolume, setExpectedVolume] = useState('') // Manual volume
+  // Volume calculator
+  const [calcMode, setCalcMode] = useState<'dimensions' | 'manual'>('manual')
   const [lengthM, setLengthM] = useState('')
   const [widthM, setWidthM] = useState('')
   const [heightM, setHeightM] = useState('')
-  const [calculatedVolume, setCalculatedVolume] = useState(0)
+  const [manualVolume, setManualVolume] = useState('')
   
   // Quick search results
   const [suggestions, setSuggestions] = useState<any[]>([])
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
   
   // Checkout data
   const [activeTrip, setActiveTrip] = useState<any>(null)
   const [actualVolume, setActualVolume] = useState('')
+  const [onsiteTrips, setOnsiteTrips] = useState<any[]>([])
 
   const [photo, setPhoto] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Computed volume
+  const computedVolume = calcMode === 'dimensions' 
+    ? (parseFloat(lengthM) > 0 && parseFloat(widthM) > 0 && parseFloat(heightM) > 0 
+        ? parseFloat(lengthM) * parseFloat(widthM) * parseFloat(heightM) 
+        : 0)
+    : (parseFloat(manualVolume) > 0 ? parseFloat(manualVolume) : 0)
 
   useEffect(() => {
     fetch('/api/materials').then(res => res.json()).then(data => setMaterials(data.data || []))
@@ -46,30 +64,22 @@ export default function QuickActionPage() {
     })
   }, [])
 
-  const [onsiteTrips, setOnsiteTrips] = useState<any[]>([])
-
+  // Fetch active trips when in checkout mode
   useEffect(() => {
     if (mode === 'checkout') {
       fetch(`/api/trips/onsite`)
         .then(res => res.json())
         .then(data => {
-          if (data.success) setOnsiteTrips(data.data || [])
+          if (data.success) {
+            setOnsiteTrips(data.data || [])
+          }
         })
     }
   }, [mode])
 
-  // Calculate volume automatically
+  // Search vehicles for checkin with debounce
   useEffect(() => {
-    if (calculationMethod === 'dimensions') {
-      const l = parseFloat(lengthM) || 0
-      const w = parseFloat(widthM) || 0
-      const h = parseFloat(heightM) || 0
-      setCalculatedVolume(l * w * h)
-    }
-  }, [lengthM, widthM, heightM, calculationMethod])
-
-  useEffect(() => {
-    if (mode === 'checkin' && plateNumber.length > 2) {
+    if (mode === 'checkin' && plateNumber.length > 1) {
       const delay = setTimeout(() => {
         fetch(`/api/vehicles/search?q=${plateNumber}`)
           .then(res => res.json())
@@ -80,10 +90,29 @@ export default function QuickActionPage() {
               setSuggestions([])
             }
           })
-      }, 500)
+      }, 400)
       return () => clearTimeout(delay)
+    } else {
+      setSuggestions([])
     }
   }, [plateNumber, mode])
+
+  // Auto-select material when vehicle is selected (based on vehicle type)
+  const handleSelectVehicle = useCallback((vehicle: any) => {
+    setPlateNumber(vehicle.plateNumber)
+    setSelectedVehicle(vehicle)
+    setSuggestions([])
+    
+    // Auto-select material based on vehicle type
+    const vehicleType = vehicle.vehicleType || ''
+    const materialName = VEHICLE_TYPE_TO_MATERIAL[vehicleType]
+    if (materialName && materials.length > 0) {
+      const matchedMaterial = materials.find(m => m.name === materialName)
+      if (matchedMaterial) {
+        setSelectedMaterial(matchedMaterial.id)
+      }
+    }
+  }, [materials])
 
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -119,31 +148,26 @@ export default function QuickActionPage() {
         if (!selectedMaterial) throw new Error('Vui lòng chọn loại vật liệu')
         if (!selectedProject) throw new Error('Vui lòng chọn công trình')
 
-        let finalVolume = null
-        if (calculationMethod === 'dimensions') {
-          if (!lengthM || !widthM || !heightM) throw new Error('Vui lòng nhập đầy đủ 3 kích thước')
-          if (parseFloat(lengthM) <= 0 || parseFloat(widthM) <= 0 || parseFloat(heightM) <= 0) {
-            throw new Error('Kích thước phải lớn hơn 0')
-          }
-          finalVolume = calculatedVolume
-        } else {
-          if (expectedVolume) {
-            if (parseFloat(expectedVolume) <= 0) throw new Error('Khối lượng phải lớn hơn 0')
-            finalVolume = parseFloat(expectedVolume)
-          }
-        }
+        const volumeM3 = computedVolume > 0 ? Math.round(computedVolume * 100) / 100 : null
 
-        const payload = {
+        const payload: any = {
           plateNumber: plateNumber,
           projectId: selectedProject,
           materialId: selectedMaterial,
-          expectedVolume: finalVolume,
-          volumeM3: finalVolume,
-          calculationMethod: calculationMethod,
-          lengthM: calculationMethod === 'dimensions' ? parseFloat(lengthM) : null,
-          widthM: calculationMethod === 'dimensions' ? parseFloat(widthM) : null,
-          heightM: calculationMethod === 'dimensions' ? parseFloat(heightM) : null,
-          checkInPhotoUrl: photo
+          expectedVolume: volumeM3,
+          checkInPhotoUrl: photo,
+        }
+
+        // Add dimension fields
+        if (calcMode === 'dimensions' && volumeM3 && volumeM3 > 0) {
+          payload.lengthM = parseFloat(lengthM)
+          payload.widthM = parseFloat(widthM)
+          payload.heightM = parseFloat(heightM)
+          payload.volumeM3 = volumeM3
+          payload.calculationMethod = 'dimensions'
+        } else if (calcMode === 'manual' && volumeM3 && volumeM3 > 0) {
+          payload.volumeM3 = volumeM3
+          payload.calculationMethod = 'manual'
         }
 
         const res = await fetch('/api/trips', {
@@ -154,7 +178,7 @@ export default function QuickActionPage() {
         const data = await res.json()
         if (!data.success) throw new Error(data.error?.message || data.message || 'Lỗi hệ thống')
         
-        toast({ title: '✅ XE VÀO THÀNH CÔNG', variant: 'success' })
+        toast({ title: 'XE VÀO THÀNH CÔNG', variant: 'success' })
       } else {
         if (!activeTrip) throw new Error('Vui lòng chọn chuyến xe đang ở trong công trình')
 
@@ -170,7 +194,7 @@ export default function QuickActionPage() {
         const data = await res.json()
         if (!data.success) throw new Error(data.error?.message || data.message || 'Lỗi hệ thống')
         
-        toast({ title: '✅ XE RA THÀNH CÔNG', variant: 'success' })
+        toast({ title: 'XE RA THÀNH CÔNG', variant: 'success' })
       }
 
       resetForm()
@@ -186,114 +210,133 @@ export default function QuickActionPage() {
     setPlateNumber('')
     setPhoto(null)
     setSelectedMaterial('')
+    setSelectedVehicle(null)
     setSuggestions([])
     setActiveTrip(null)
     setActualVolume('')
-    setExpectedVolume('')
+    setCalcMode('manual')
     setLengthM('')
     setWidthM('')
     setHeightM('')
-    setCalculatedVolume(0)
+    setManualVolume('')
   }
 
+  // ==========================================
+  // MODE SELECTION — Big, clear buttons
+  // ==========================================
   if (!mode) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] gap-8 p-4 bg-slate-50">
+      <div className="flex flex-col items-center justify-center min-h-[75vh] gap-10 p-4">
         <div className="text-center">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 uppercase">
-            Thao Tác Nhanh
+          <Truck className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+          <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+            THAO TÁC NHANH
           </h1>
-          <p className="text-slate-500 mt-2">Chọn tác vụ bạn muốn thực hiện</p>
+          <p className="text-lg text-slate-400 mt-2">Chọn thao tác bạn muốn thực hiện</p>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-2xl">
           <button 
             onClick={() => setMode('checkin')}
-            className="flex flex-col items-center justify-center gap-4 bg-white border border-slate-200 text-slate-900 rounded-lg p-10 shadow-sm hover:border-blue-500 hover:shadow-md transition-all group"
+            className="flex flex-col items-center justify-center gap-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl p-10 md:p-14 shadow-2xl shadow-blue-600/30 hover:shadow-blue-500/40 hover:-translate-y-1 transition-all active:translate-y-0 border-2 border-blue-500"
           >
-            <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-600 transition-colors">
-              <ArrowRightToLine className="w-10 h-10 text-blue-600 group-hover:text-white transition-colors" />
-            </div>
-            <span className="text-2xl font-semibold">XE VÀO</span>
+            <ArrowRightToLine className="w-20 h-20 md:w-28 md:h-28" strokeWidth={1.5} />
+            <span className="text-3xl md:text-4xl font-black tracking-wide">XE VÀO</span>
+            <span className="text-sm text-blue-200">Ghi nhận xe vào công trình</span>
           </button>
-          
           <button 
             onClick={() => setMode('checkout')}
-            className="flex flex-col items-center justify-center gap-4 bg-white border border-slate-200 text-slate-900 rounded-lg p-10 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all group"
+            className="flex flex-col items-center justify-center gap-5 bg-amber-500 hover:bg-amber-400 text-white rounded-2xl p-10 md:p-14 shadow-2xl shadow-amber-500/30 hover:shadow-amber-400/40 hover:-translate-y-1 transition-all active:translate-y-0 border-2 border-amber-400"
           >
-            <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-600 transition-colors">
-              <ArrowLeftFromLine className="w-10 h-10 text-emerald-600 group-hover:text-white transition-colors" />
-            </div>
-            <span className="text-2xl font-semibold">XE RA</span>
+            <ArrowLeftFromLine className="w-20 h-20 md:w-28 md:h-28" strokeWidth={1.5} />
+            <span className="text-3xl md:text-4xl font-black tracking-wide">XE RA</span>
+            <span className="text-sm text-amber-200">Xác nhận xe rời công trình</span>
           </button>
         </div>
       </div>
     )
   }
 
+  // ==========================================
+  // FORM — Large inputs, clear labels, step by step
+  // ==========================================
   return (
-    <div className="min-h-screen bg-slate-50 py-6 px-4">
-      <div className="max-w-xl mx-auto bg-white rounded-lg shadow-sm border border-slate-200 p-6 md:p-8">
-        <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
-          <h2 className="text-xl font-semibold flex items-center gap-3 text-slate-900">
-            {mode === 'checkin' ? (
-              <>
-                <div className="p-2 bg-blue-50 rounded-lg"><ArrowRightToLine className="w-6 h-6 text-blue-600" /></div>
-                ĐĂNG KÝ XE VÀO
-              </>
-            ) : (
-              <>
-                <div className="p-2 bg-emerald-50 rounded-lg"><ArrowLeftFromLine className="w-6 h-6 text-emerald-600" /></div>
-                XÁC NHẬN XE RA
-              </>
-            )}
+    <div className="max-w-lg mx-auto pb-8">
+      {/* Header with back button */}
+      <div className="flex items-center gap-3 mb-6">
+        <button 
+          onClick={resetForm} 
+          className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+        >
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <div>
+          <h2 className={`text-2xl font-black flex items-center gap-2 ${mode === 'checkin' ? 'text-blue-400' : 'text-amber-400'}`}>
+            {mode === 'checkin' ? <ArrowRightToLine className="w-7 h-7" /> : <ArrowLeftFromLine className="w-7 h-7" />}
+            {mode === 'checkin' ? 'XE VÀO' : 'XE RA'}
           </h2>
-          <button onClick={resetForm} className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
-            Quay lại
-          </button>
+          <p className="text-sm text-slate-400 mt-0.5">
+            {mode === 'checkin' ? 'Đăng ký xe vào công trình' : 'Xác nhận xe rời công trình'}
+          </p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Photo Capture */}
-          <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Chụp ảnh xe (Bắt buộc) <span className="text-red-500">*</span></label>
-            {photo ? (
-              <div className="relative rounded-lg overflow-hidden border border-slate-200 aspect-video bg-slate-100 flex items-center justify-center shadow-sm">
-                <img src={photo} alt="Captured" className="w-full h-full object-cover" />
+      <form onSubmit={handleSubmit} className="space-y-5">
+        
+        {/* ==================== STEP 1: PHOTO ==================== */}
+        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <label className="flex items-center gap-2 text-base font-bold text-white mb-3">
+            <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center font-bold">1</span>
+            Chụp ảnh xe
+            <span className="text-red-400 text-sm">(bắt buộc)</span>
+          </label>
+          {photo ? (
+            <div className="relative rounded-xl overflow-hidden border-2 border-green-500 aspect-video bg-black flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo} alt="Ảnh xe" className="w-full h-full object-cover" />
+              <div className="absolute top-2 right-2 flex gap-2">
                 <button 
                   type="button"
                   onClick={() => setPhoto(null)} 
-                  className="absolute top-3 right-3 bg-white/90 text-slate-900 px-3 py-1.5 rounded-md text-sm font-medium shadow-sm hover:bg-white border border-slate-200"
+                  className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-black transition"
                 >
                   Chụp lại
                 </button>
               </div>
-            ) : (
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 rounded-lg aspect-video flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-slate-50 hover:border-slate-400 transition-colors bg-slate-50/50"
-              >
-                <Camera className="w-10 h-10 text-slate-400" />
-                <span className="text-sm text-slate-600 font-medium">Bấm vào đây để mở Camera</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  capture="environment" 
-                  className="hidden" 
-                  ref={fileInputRef}
-                  onChange={handlePhotoCapture}
-                />
+              <div className="absolute bottom-2 left-2">
+                <span className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Đã chụp
+                </span>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-600 rounded-xl aspect-video flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-slate-700/50 hover:border-blue-500 transition-all"
+            >
+              <Camera className="w-16 h-16 text-slate-500" />
+              <span className="text-lg font-bold text-slate-400">BẤM VÀO ĐÂY ĐỂ CHỤP ẢNH</span>
+              <span className="text-xs text-slate-500">Hoặc chọn ảnh từ thư viện</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                capture="environment" 
+                className="hidden" 
+                ref={fileInputRef}
+                onChange={handlePhotoCapture}
+              />
+            </div>
+          )}
+        </div>
 
-          {/* Plate Number */}
-          <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">
-              {mode === 'checkout' ? 'Chọn xe đang ở công trình' : 'Biển số xe'} <span className="text-red-500">*</span>
-            </label>
-            
-            {mode === 'checkout' ? (
+        {/* ==================== STEP 2: PLATE / TRIP ==================== */}
+        <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+          <label className="flex items-center gap-2 text-base font-bold text-white mb-3">
+            <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center font-bold">2</span>
+            {mode === 'checkout' ? 'Chọn xe đang ở công trình' : 'Nhập biển số xe'}
+          </label>
+          
+          {mode === 'checkout' ? (
+            <>
               <select
                 required
                 value={activeTrip?.id || ''}
@@ -302,204 +345,260 @@ export default function QuickActionPage() {
                   setActiveTrip(trip || null)
                   if (trip) setPlateNumber(trip.vehicle?.plateNumber || '')
                 }}
-                className="w-full px-4 py-3 text-base bg-white text-slate-900 border border-slate-300 rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none shadow-sm"
+                className="w-full px-4 py-4 text-xl font-bold bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-amber-500 focus:outline-none"
               >
-                <option value="">-- Chọn xe --</option>
+                <option value="">-- Bấm vào đây để chọn xe --</option>
                 {onsiteTrips.map(t => (
                   <option key={t.id} value={t.id}>
-                    {t.vehicle?.plateNumber} - {t.driver?.fullName || 'Khách'}
+                    {t.vehicle?.plateNumber} — {t.material?.name} — {t.driver?.fullName || 'Không rõ tài xế'}
                   </option>
                 ))}
               </select>
-            ) : (
-              <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input 
-                  type="text" 
-                  required
-                  value={plateNumber}
-                  onChange={e => setPlateNumber(e.target.value.toUpperCase())}
-                  onBlur={() => setPlateNumber(normalizePlateNumber(plateNumber))}
-                  placeholder="VD: 51C-123.45"
-                  className="w-full pl-11 pr-4 py-3 text-lg font-medium bg-white text-slate-900 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none uppercase shadow-sm placeholder:normal-case placeholder:font-normal placeholder:text-slate-400"
-                />
-              </div>
-            )}
-            
-            {/* Suggestions for Check In */}
-            {mode === 'checkin' && suggestions.length > 0 && !activeTrip && (
-              <div className="mt-2 border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm absolute z-10 w-full max-w-xl">
-                {suggestions.map(s => (
-                  <div 
-                    key={s.id} 
-                    className="px-4 py-3 border-b last:border-0 border-slate-100 hover:bg-slate-50 cursor-pointer flex justify-between items-center"
-                    onClick={() => {
-                      setPlateNumber(s.plateNumber || s.vehicle?.plateNumber)
-                      setSuggestions([])
-                    }}
-                  >
-                    <span className="font-medium text-slate-900">{s.plateNumber || s.vehicle?.plateNumber}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Check In Fields */}
-          {mode === 'checkin' && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900 mb-2">Vật liệu <span className="text-red-500">*</span></label>
-                  <select 
-                    required
-                    value={selectedMaterial} 
-                    onChange={e => setSelectedMaterial(e.target.value)}
-                    className="w-full px-4 py-3 text-base bg-white text-slate-900 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none shadow-sm"
-                  >
-                    <option value="">-- Chọn vật liệu --</option>
-                    {materials.map(m => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                {projects.length > 1 && (
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-900 mb-2">Công trình <span className="text-red-500">*</span></label>
-                    <select 
-                      required
-                      value={selectedProject} 
-                      onChange={e => setSelectedProject(e.target.value)}
-                      className="w-full px-4 py-3 text-base bg-white text-slate-900 border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none shadow-sm"
-                    >
-                      <option value="">-- Chọn công trình --</option>
-                      {projects.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-              
-              {/* Volume Input Section */}
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="block text-sm font-semibold text-slate-900">Tính khối lượng</label>
-                  <div className="flex bg-white rounded-md border border-slate-200 p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setCalculationMethod('dimensions')}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-sm flex items-center gap-1.5 transition-colors ${calculationMethod === 'dimensions' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                      <Calculator className="w-3.5 h-3.5" />
-                      Nhập kích thước
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCalculationMethod('manual')}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-sm flex items-center gap-1.5 transition-colors ${calculationMethod === 'manual' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                    >
-                      <CheckSquare className="w-3.5 h-3.5" />
-                      Nhập trực tiếp
-                    </button>
-                  </div>
-                </div>
-
-                {calculationMethod === 'dimensions' ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Dài (m)</label>
-                        <input 
-                          type="number" step="0.01" min="0" required
-                          value={lengthM} onChange={e => setLengthM(e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Rộng (m)</label>
-                        <input 
-                          type="number" step="0.01" min="0" required
-                          value={widthM} onChange={e => setWidthM(e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Cao (m)</label>
-                        <input 
-                          type="number" step="0.01" min="0" required
-                          value={heightM} onChange={e => setHeightM(e.target.value)}
-                          className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                        />
-                      </div>
-                    </div>
-                    <div className="bg-white border border-blue-100 bg-blue-50/50 rounded-md p-3 flex items-center justify-between">
-                      <span className="text-sm text-slate-600 font-medium">Khối lượng tính toán:</span>
-                      <span className="text-lg font-bold text-blue-700">{calculatedVolume > 0 ? calculatedVolume.toFixed(2) : '0.00'} m³</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Số khối (m³)</label>
-                    <input 
-                      type="number" 
-                      step="0.01" min="0"
-                      value={expectedVolume}
-                      onChange={e => setExpectedVolume(e.target.value)}
-                      placeholder="Ví dụ: 15.5"
-                      className="w-full px-4 py-3 text-base font-medium bg-white border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none shadow-sm"
-                    />
-                  </div>
-                )}
-              </div>
+              {onsiteTrips.length === 0 && (
+                <p className="text-sm text-slate-500 mt-2">Hiện không có xe nào đang ở công trình</p>
+              )}
             </>
+          ) : (
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-500" />
+              <input 
+                type="text" 
+                value={plateNumber}
+                onChange={e => { setPlateNumber(e.target.value.toUpperCase()); setSelectedVehicle(null) }}
+                onBlur={() => setPlateNumber(normalizePlateNumber(plateNumber))}
+                placeholder="Gõ biển số, VD: 51C12345"
+                className="w-full pl-14 pr-4 py-4 text-2xl font-black bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-blue-500 focus:outline-none uppercase tracking-wider"
+              />
+            </div>
           )}
+          
+          {/* Vehicle suggestions */}
+          {mode === 'checkin' && suggestions.length > 0 && !selectedVehicle && (
+            <div className="mt-3 border border-slate-600 rounded-xl overflow-hidden bg-slate-900">
+              <div className="px-3 py-2 text-xs text-slate-500 bg-slate-800 font-medium">Xe tìm thấy — bấm để chọn:</div>
+              {suggestions.map(s => (
+                <div 
+                  key={s.id} 
+                  className="px-4 py-4 border-b last:border-0 border-slate-700 hover:bg-blue-900/30 cursor-pointer flex justify-between items-center transition"
+                  onClick={() => handleSelectVehicle(s)}
+                >
+                  <div>
+                    <span className="font-black text-xl text-white tracking-wider">{s.plateNumber}</span>
+                    <span className="ml-3 text-sm text-slate-400">{s.vehicleType}</span>
+                  </div>
+                  <span className="text-xs text-blue-400 font-medium">Chọn →</span>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Selected vehicle info */}
+          {selectedVehicle && (
+            <div className="mt-3 bg-green-900/30 border border-green-700 rounded-xl p-3 flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+              <div className="text-sm">
+                <span className="font-bold text-green-300">{selectedVehicle.plateNumber}</span>
+                <span className="text-green-400/70 mx-2">—</span>
+                <span className="text-green-400/70">{selectedVehicle.vehicleType}</span>
+                {selectedVehicle.ownerName && <span className="text-green-400/70"> — {selectedVehicle.ownerName}</span>}
+              </div>
+            </div>
+          )}
+        </div>
 
-          {/* Check Out Fields */}
-          {mode === 'checkout' && activeTrip && (
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 space-y-4">
-              <div className="flex justify-between items-center text-sm border-b border-slate-200 pb-3">
-                <span className="text-slate-500">Giờ vào:</span>
-                <span className="font-semibold text-slate-900">
-                  {new Date(activeTrip.checkInAt).toLocaleTimeString('vi-VN')}
-                </span>
+        {/* ==================== STEP 3: CHECKIN DETAILS ==================== */}
+        {mode === 'checkin' && (
+          <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 space-y-4">
+            <label className="flex items-center gap-2 text-base font-bold text-white mb-1">
+              <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center font-bold">3</span>
+              Thông tin chuyến
+            </label>
+            
+            {/* Material */}
+            <div>
+              <label className="block text-sm font-bold text-slate-300 mb-2">Vật liệu chở <span className="text-red-400">*</span></label>
+              <select 
+                required
+                value={selectedMaterial} 
+                onChange={e => setSelectedMaterial(e.target.value)}
+                className="w-full px-4 py-3.5 text-lg font-semibold bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-blue-500 focus:outline-none"
+              >
+                <option value="">-- Chọn vật liệu --</option>
+                {materials.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+              {selectedVehicle && selectedMaterial && (
+                <p className="text-xs text-blue-400 mt-1.5">
+                  Tự động chọn theo loại xe: {selectedVehicle.vehicleType}
+                </p>
+              )}
+            </div>
+            
+            {/* Project */}
+            {projects.length > 1 && (
+              <div>
+                <label className="block text-sm font-bold text-slate-300 mb-2">Công trình <span className="text-red-400">*</span></label>
+                <select 
+                  required
+                  value={selectedProject} 
+                  onChange={e => setSelectedProject(e.target.value)}
+                  className="w-full px-4 py-3.5 text-lg font-semibold bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">-- Chọn công trình --</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
               </div>
-              <div className="flex justify-between items-center text-sm border-b border-slate-200 pb-3">
-                <span className="text-slate-500">Vật liệu:</span>
-                <span className="font-semibold text-slate-900">{activeTrip.material?.name || '-'}</span>
+            )}
+
+            {/* Volume Calculator */}
+            <div>
+              <label className="block text-sm font-bold text-slate-300 mb-2">Khối lượng (m³)</label>
+              
+              {/* Toggle dimensions vs manual */}
+              <div className="flex gap-2 mb-3">
+                <button 
+                  type="button"
+                  onClick={() => setCalcMode('manual')}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition ${
+                    calcMode === 'manual' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-slate-700 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Nhập trực tiếp
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setCalcMode('dimensions')}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition ${
+                    calcMode === 'dimensions' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-slate-700 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Tính Dài × Rộng × Cao
+                </button>
               </div>
-              <div className="pt-2">
-                <label className="block text-sm font-semibold text-slate-900 mb-2">Số khối (m³) thực tế</label>
+
+              {calcMode === 'manual' ? (
                 <input 
                   type="number" 
                   step="0.1"
                   min="0"
-                  value={actualVolume}
-                  onChange={e => setActualVolume(e.target.value)}
-                  placeholder="Ví dụ: 15.5 (không bắt buộc)"
-                  className="w-full px-4 py-3 text-base font-medium bg-white border border-slate-300 rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none shadow-sm"
+                  value={manualVolume}
+                  onChange={e => setManualVolume(e.target.value)}
+                  placeholder="VD: 15.5 (có thể để trống)"
+                  className="w-full px-4 py-3.5 text-xl font-bold bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-blue-500 focus:outline-none"
                 />
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1 text-center">Dài (m)</label>
+                      <input 
+                        type="number" step="0.1" min="0"
+                        value={lengthM} onChange={e => setLengthM(e.target.value)}
+                        placeholder="0.0"
+                        className="w-full px-3 py-3 text-lg font-bold bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-blue-500 focus:outline-none text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1 text-center">Rộng (m)</label>
+                      <input 
+                        type="number" step="0.1" min="0"
+                        value={widthM} onChange={e => setWidthM(e.target.value)}
+                        placeholder="0.0"
+                        className="w-full px-3 py-3 text-lg font-bold bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-blue-500 focus:outline-none text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-400 mb-1 text-center">Cao (m)</label>
+                      <input 
+                        type="number" step="0.1" min="0"
+                        value={heightM} onChange={e => setHeightM(e.target.value)}
+                        placeholder="0.0"
+                        className="w-full px-3 py-3 text-lg font-bold bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-blue-500 focus:outline-none text-center"
+                      />
+                    </div>
+                  </div>
+                  {parseFloat(lengthM) > 0 && parseFloat(widthM) > 0 && parseFloat(heightM) > 0 && (
+                    <div className="text-center text-sm text-slate-400">
+                      {parseFloat(lengthM).toFixed(1)} × {parseFloat(widthM).toFixed(1)} × {parseFloat(heightM).toFixed(1)} =
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Volume result */}
+              {computedVolume > 0 && (
+                <div className="mt-3 bg-blue-900/40 border border-blue-700 rounded-xl p-4 text-center">
+                  <span className="text-sm text-blue-300">Khối lượng:</span>
+                  <div className="text-3xl font-black text-blue-300 mt-1">
+                    {computedVolume.toFixed(2)} m³
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ==================== STEP 3 CHECKOUT: TRIP INFO ==================== */}
+        {mode === 'checkout' && activeTrip && (
+          <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 space-y-4">
+            <label className="flex items-center gap-2 text-base font-bold text-white mb-1">
+              <span className="w-7 h-7 rounded-full bg-amber-500 text-white text-sm flex items-center justify-center font-bold">3</span>
+              Thông tin chuyến
+            </label>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-slate-900 p-3 rounded-lg">
+                <span className="text-slate-500 text-xs block">Giờ vào</span>
+                <span className="font-bold text-white">{new Date(activeTrip.checkInAt).toLocaleTimeString('vi-VN')}</span>
+              </div>
+              <div className="bg-slate-900 p-3 rounded-lg">
+                <span className="text-slate-500 text-xs block">Vật liệu</span>
+                <span className="font-bold text-white">{activeTrip.material?.name}</span>
               </div>
             </div>
-          )}
+            
+            <div>
+              <label className="block text-sm font-bold text-slate-300 mb-2">Số khối (m³) thực tế</label>
+              <input 
+                type="number" 
+                step="0.1"
+                min="0"
+                value={actualVolume}
+                onChange={e => setActualVolume(e.target.value)}
+                placeholder="VD: 15.5 (không bắt buộc)"
+                className="w-full px-4 py-3.5 text-xl font-bold bg-slate-900 text-white border-2 border-amber-600 rounded-xl focus:border-amber-500 focus:outline-none"
+              />
+            </div>
+          </div>
+        )}
 
-          {/* Submit Button */}
-          <button 
-            type="submit"
-            disabled={loading}
-            className={`w-full py-3.5 rounded-lg font-semibold text-white shadow-sm flex items-center justify-center gap-2 transition-colors focus:ring-2 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed ${
-              mode === 'checkin' 
-                ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-600' 
-                : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-600'
-            }`}
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-              mode === 'checkin' ? 'XÁC NHẬN XE VÀO' : 'XÁC NHẬN XE RA'
-            )}
-          </button>
-        </form>
-      </div>
+        {/* ==================== SUBMIT BUTTON ==================== */}
+        <button 
+          type="submit"
+          disabled={loading}
+          className={`w-full py-6 rounded-xl font-black text-2xl text-white shadow-xl transition-all active:translate-y-0 flex items-center justify-center gap-3 ${
+            loading ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-1'
+          } ${
+            mode === 'checkin' ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30' : 'bg-amber-500 hover:bg-amber-400 shadow-amber-500/30'
+          }`}
+        >
+          {loading ? (
+            <Loader2 className="w-8 h-8 animate-spin" />
+          ) : (
+            <>
+              {mode === 'checkin' ? <ArrowRightToLine className="w-8 h-8" /> : <ArrowLeftFromLine className="w-8 h-8" />}
+              {mode === 'checkin' ? 'XÁC NHẬN XE VÀO' : 'XÁC NHẬN XE RA'}
+            </>
+          )}
+        </button>
+      </form>
     </div>
   )
 }
