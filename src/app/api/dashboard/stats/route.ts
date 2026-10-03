@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { hasPermission, getAccessibleProjectIds } from '@/lib/permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { successResponse, unauthorizedResponse, forbiddenResponse, serverErrorResponse } from '@/lib/api-response'
-import { startOfDay, endOfDay } from '@/lib/date-utils'
+import { resolvePeriod, vnStart, vnEnd } from '@/lib/date-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,47 +13,19 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = request.nextUrl
     const period = searchParams.get('period') || 'today'
+    const dateParam = searchParams.get('date') || ''
     const projectId = searchParams.get('projectId') || ''
 
-    // Calculate date range
-    let dateStart: Date
-    let dateEnd: Date = endOfDay()
-    const now = new Date()
-
-    switch (period) {
-      case 'yesterday':
-        const yesterday = new Date(now)
-        yesterday.setDate(yesterday.getDate() - 1)
-        dateStart = startOfDay(yesterday)
-        dateEnd = endOfDay(yesterday)
-        break
-      case '7days':
-        const weekAgo = new Date(now)
-        weekAgo.setDate(weekAgo.getDate() - 7)
-        dateStart = startOfDay(weekAgo)
-        break
-      case '30days':
-        const monthAgo = new Date(now)
-        monthAgo.setDate(monthAgo.getDate() - 30)
-        dateStart = startOfDay(monthAgo)
-        break
-      case 'month':
-        dateStart = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1))
-        break
-      case 'lastmonth':
-        dateStart = startOfDay(new Date(now.getFullYear(), now.getMonth() - 1, 1))
-        dateEnd = endOfDay(new Date(now.getFullYear(), now.getMonth(), 0))
-        break
-      default: // today
-        dateStart = startOfDay()
-        break
-    }
-
-    // Custom date range
+    // Calculate date range (Vietnam time)
     const customStart = searchParams.get('startDate')
     const customEnd = searchParams.get('endDate')
-    if (customStart) dateStart = new Date(customStart)
-    if (customEnd) dateEnd = new Date(customEnd + 'T23:59:59.999Z')
+    const resolved = resolvePeriod(period, dateParam)
+    const range = {
+      from: customStart || resolved.from,
+      to: customEnd || resolved.to,
+    }
+    const dateStart = vnStart(range.from)
+    const dateEnd = vnEnd(range.to)
 
     // Build scope filter
     const accessibleProjects = getAccessibleProjectIds(user)
@@ -155,6 +127,7 @@ export async function GET(request: NextRequest) {
       totalVolumeM3: Number(totalVolume._sum.volumeM3 || 0),
       todayTrips: checkedInCount,
       volumeByMaterial,
+      range,
     })
   } catch (error) {
     console.error('Dashboard stats error:', error)

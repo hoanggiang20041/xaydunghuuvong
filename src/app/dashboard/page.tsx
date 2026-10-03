@@ -44,29 +44,17 @@ export default function DashboardPage() {
     }
   }, [period, date, user])
 
+  const range = (stats as any)?.range as { from: string; to: string } | undefined
+
   const fetchRecentTrips = useCallback(async () => {
-    if (!user) return
+    if (!user || !range) return
     try {
-      // Fetch onsite and recent completed
-      const res = await fetch('/api/trips?limit=10')
+      const params = new URLSearchParams({ pageSize: '10', startDate: range.from, endDate: range.to })
+      const res = await fetch(`/api/trips?${params}`)
       const data = await res.json()
-      if (data.success) {
-        setRecentTrips(data.data || [])
-      } else {
-        // Fallback to onsite if /api/trips doesn't work this way
-        const resOnsite = await fetch('/api/trips/onsite')
-        const dataOnsite = await resOnsite.json()
-        if (dataOnsite.success) setRecentTrips(dataOnsite.data || [])
-      }
-    } catch {
-      // Fallback
-      try {
-        const resOnsite = await fetch('/api/trips/onsite')
-        const dataOnsite = await resOnsite.json()
-        if (dataOnsite.success) setRecentTrips(dataOnsite.data || [])
-      } catch {}
-    }
-  }, [user])
+      if (data.success) setRecentTrips(data.data || [])
+    } catch {}
+  }, [user, range?.from, range?.to])
 
   useEffect(() => { 
     fetchStats() 
@@ -149,7 +137,7 @@ export default function DashboardPage() {
             ))}
           </div>
           <div className="relative">
-             <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setPeriod(''); setLoading(true) }} className="px-3 py-1.5 sm:py-2 w-full bg-white border border-slate-200 rounded-lg text-sm shadow-sm text-slate-700 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" />
+             <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setPeriod(e.target.value ? '' : 'today'); setLoading(true) }} className="px-3 py-1.5 sm:py-2 w-full bg-white border border-slate-200 rounded-lg text-sm shadow-sm text-slate-700 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" />
           </div>
         </div>
       </div>

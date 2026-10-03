@@ -6,7 +6,7 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { auditAction } from '@/lib/audit'
 import { successResponse, errorResponse, unauthorizedResponse, forbiddenResponse, notFoundResponse, validationErrorResponse, serverErrorResponse, parsePagination } from '@/lib/api-response'
 import { createTripSchema } from '@/lib/validation'
-import { generateTripCode, startOfDay, endOfDay } from '@/lib/date-utils'
+import { generateTripCode, startOfDay, endOfDay, vnStart, vnEnd } from '@/lib/date-utils'
 import { normalizePlateNumber } from '@/lib/plate-utils'
 
 export async function GET(request: NextRequest) {
@@ -55,9 +55,10 @@ export async function GET(request: NextRequest) {
     if (dumpLocationId) where.dumpLocationId = dumpLocationId
 
     if (startDate || endDate) {
-      where.checkInAt = {}
-      if (startDate) (where.checkInAt as Record<string, unknown>).gte = new Date(startDate)
-      if (endDate) (where.checkInAt as Record<string, unknown>).lte = new Date(endDate + 'T23:59:59.999Z')
+      const range: Record<string, Date> = {}
+      if (startDate) range.gte = vnStart(startDate)
+      if (endDate) range.lte = vnEnd(endDate)
+      where.createdAt = range
     }
 
     // Allowed sort fields

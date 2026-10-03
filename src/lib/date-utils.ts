@@ -90,10 +90,64 @@ export function generateTripCode(sequenceNumber: number): string {
 }
 
 /**
+ * Today's date in Vietnam as YYYY-MM-DD
+ */
+export function vnToday(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: APP_TIMEZONE })
+}
+
+/**
+ * Shift a YYYY-MM-DD string by N days
+ */
+export function shiftDay(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Start (00:00:00 VN) of a YYYY-MM-DD day as UTC Date
+ */
+export function vnStart(dateStr: string): Date {
+  return new Date(`${dateStr}T00:00:00.000+07:00`)
+}
+
+/**
+ * End (23:59:59 VN) of a YYYY-MM-DD day as UTC Date
+ */
+export function vnEnd(dateStr: string): Date {
+  return new Date(`${dateStr}T23:59:59.999+07:00`)
+}
+
+/**
+ * Resolve a dashboard period / specific date into a VN date range (YYYY-MM-DD)
+ */
+export function resolvePeriod(period: string, date?: string): { from: string; to: string } {
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) return { from: date, to: date }
+  const today = vnToday()
+  switch (period) {
+    case 'yesterday': {
+      const y = shiftDay(today, -1)
+      return { from: y, to: y }
+    }
+    case 'week':
+    case '7days':
+      return { from: shiftDay(today, -6), to: today }
+    case '30days':
+      return { from: shiftDay(today, -29), to: today }
+    case 'month':
+      return { from: `${today.slice(0, 7)}-01`, to: today }
+    case 'today':
+    default:
+      return { from: today, to: today }
+  }
+}
+
+/**
  * Parse date range from query params
  */
 export function parseDateRange(startDate?: string, endDate?: string) {
-  const start = startDate ? new Date(startDate) : startOfDay()
-  const end = endDate ? new Date(endDate + 'T23:59:59.999Z') : endOfDay()
+  const start = startDate ? vnStart(startDate) : startOfDay()
+  const end = endDate ? vnEnd(endDate) : endOfDay()
   return { start, end }
 }
