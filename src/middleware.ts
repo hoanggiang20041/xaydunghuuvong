@@ -7,7 +7,7 @@ const JWT_REFRESH_SECRET = new TextEncoder().encode(process.env.JWT_REFRESH_SECR
 
 // Paths that don't require authentication
 const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password']
-const PUBLIC_API_PATHS = ['/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password', '/api/health', '/api/seed']
+const PUBLIC_API_PATHS = ['/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password', '/api/health']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
