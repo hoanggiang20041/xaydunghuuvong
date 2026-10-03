@@ -61,8 +61,8 @@ export function AppSidebar() {
       {/* Header */}
       <div className="px-4 py-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #d69e2e 0%, #ecc94b 100%)' }}>
-            <span className="text-sm font-black" style={{ color: '#1a365d', fontFamily: 'Georgia, serif' }}>HV</span>
+          <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 shadow-lg bg-white border-2" style={{ borderColor: '#d69e2e' }}>
+            <img src="/logo.jpg" alt="Hữu Vọng" className="w-full h-full object-cover scale-125" />
           </div>
           {!collapsed && (
             <div>

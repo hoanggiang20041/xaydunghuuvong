@@ -188,9 +188,12 @@ export async function getCurrentUser() {
   }
 
   const isSuperAdmin = roles.includes('SUPER_ADMIN')
-  const projectIds = isSuperAdmin 
-    ? null // null means all projects
-    : user.userProjects.map(up => up.projectId)
+  // Roles that oversee the whole company see every project
+  const GLOBAL_ROLES = ['SUPER_ADMIN', 'DIRECTOR', 'ADMIN', 'ACCOUNTANT']
+  const hasGlobalScope = roles.some(r => GLOBAL_ROLES.includes(r))
+  const assigned = user.userProjects.map(up => up.projectId)
+  // null means all projects. Users without any explicit assignment also see all.
+  const projectIds = hasGlobalScope || assigned.length === 0 ? null : assigned
 
   return {
     ...user,
