@@ -53,8 +53,8 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-20">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-xl shadow-amber-500/20 mb-8">
-            <span className="text-3xl font-black text-[#0f1b2d]" style={{ fontFamily: 'Georgia, serif' }}>HV</span>
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full shadow-xl shadow-amber-500/20 mb-8 overflow-hidden border-2 border-amber-500/50">
+            <img src="/logo.jpg" alt="Logo Hữu Vọng" className="w-full h-full object-cover" />
           </div>
           
           <h1 className="text-5xl font-bold text-white tracking-tight leading-[1.1] mb-6">
@@ -90,8 +90,8 @@ export default function LoginPage() {
           
           {/* Mobile only logo */}
           <div className="lg:hidden text-center mb-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-xl shadow-amber-500/20 mb-4">
-              <span className="text-2xl font-black text-[#0f1b2d]" style={{ fontFamily: 'Georgia, serif' }}>HV</span>
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full shadow-xl shadow-amber-500/20 mb-4 overflow-hidden border-2 border-amber-500/50">
+              <img src="/logo.jpg" alt="Logo Hữu Vọng" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">HỮU VỌNG</h1>
             <p className="text-sm text-slate-400">Quản lý Vận chuyển</p>

@@ -23,13 +23,14 @@ export default function DashboardPage() {
   const [recentTrips, setRecentTrips] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('today')
+  const [date, setDate] = useState('')
   const [error, setError] = useState('')
 
   const fetchStats = useCallback(async () => {
     if (!user) return
     try {
       setLoading(true)
-      const res = await fetch(`/api/dashboard/stats?period=${period}`)
+      const res = await fetch(`/api/dashboard/stats?period=${period}&date=${date}`)
       const data = await res.json()
       if (data.success) { 
         setStats(data.data)
@@ -41,7 +42,7 @@ export default function DashboardPage() {
     } finally { 
       setLoading(false) 
     }
-  }, [period, user])
+  }, [period, date, user])
 
   const fetchRecentTrips = useCallback(async () => {
     if (!user) return
@@ -90,6 +91,28 @@ export default function DashboardPage() {
     return 'Chào buổi tối'
   }
 
+  const getHeaderText = () => {
+    if (!mounted) return 'Đang tải ngày tháng...'
+    if (date) {
+      const d = new Date(date)
+      if (!isNaN(d.getTime())) return `Ngày ${d.toLocaleDateString('vi-VN')}`
+    }
+    const now = new Date()
+    switch (period) {
+      case 'yesterday':
+        const y = new Date(now)
+        y.setDate(y.getDate() - 1)
+        return `Hôm qua, ${y.toLocaleDateString('vi-VN')}`
+      case 'week':
+        return '7 ngày qua'
+      case 'month':
+        return `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`
+      case 'today':
+      default:
+        return `Hôm nay, ${now.toLocaleDateString('vi-VN')}`
+    }
+  }
+
   return (
     <div className="space-y-6 bg-slate-50 min-h-screen p-4 md:p-6">
       {/* Page Header */}
@@ -99,30 +122,35 @@ export default function DashboardPage() {
             {mounted ? greeting() : 'Xin chào'}, <span className="text-blue-600">{user?.fullName || 'bạn'}</span>
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            {mounted ? new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Đang tải ngày tháng...'}
+            {getHeaderText()}
           </p>
         </div>
 
         {/* Period filter */}
-        <div className="flex border border-slate-200 rounded-lg overflow-hidden bg-white">
-          {[
-            { key: 'today', label: 'Hôm nay' },
-            { key: 'yesterday', label: 'Hôm qua' },
-            { key: 'week', label: '7 ngày' },
-            { key: 'month', label: 'Tháng' },
-          ].map(p => (
-            <button
-              key={p.key}
-              onClick={() => { setPeriod(p.key); setLoading(true) }}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-r border-slate-200 last:border-r-0 ${
-                period === p.key 
-                  ? 'bg-slate-100 text-slate-900' 
-                  : 'text-slate-500 hover:bg-slate-50'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
+            {[
+              { key: 'today', label: 'Hôm nay' },
+              { key: 'yesterday', label: 'Hôm qua' },
+              { key: 'week', label: '7 ngày' },
+              { key: 'month', label: 'Tháng này' },
+            ].map(p => (
+              <button
+                key={p.key}
+                onClick={() => { setPeriod(p.key); setDate(''); setLoading(true) }}
+                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-r border-slate-200 last:border-r-0 ${
+                  period === p.key && !date
+                    ? 'bg-slate-100 text-slate-900' 
+                    : 'text-slate-500 hover:bg-slate-50'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="relative">
+             <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setPeriod(''); setLoading(true) }} className="px-3 py-1.5 sm:py-2 w-full bg-white border border-slate-200 rounded-lg text-sm shadow-sm text-slate-700 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500" />
+          </div>
         </div>
       </div>
 

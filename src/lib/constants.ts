@@ -44,6 +44,7 @@ export const ENTITY_STATUS_LABELS: Record<string, string> = {
 export const ROLE_LABELS: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
   ADMIN: 'Quản lý',
+  DIRECTOR: 'Giám đốc',
   SUPERVISOR: 'Giám sát',
   GATE_STAFF: 'Nhân viên cổng',
   ACCOUNTANT: 'Kế toán',
