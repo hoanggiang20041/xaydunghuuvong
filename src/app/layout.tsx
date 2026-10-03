@@ -13,6 +13,12 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Công Ty TNHH Hữu Vọng - Quản lý Vận chuyển Công trình",
   description: "Hệ thống quản lý xe vận chuyển vật liệu công trình của Công Ty TNHH Hữu Vọng. Theo dõi xe ra/vào, khối lượng vật liệu, báo cáo chi tiết.",
+  applicationName: "Hữu Vọng",
+  appleWebApp: {
+    capable: true,
+    title: "Hữu Vọng",
+    statusBarStyle: "black-translucent",
+  },
 }
 
 export default function RootLayout({
