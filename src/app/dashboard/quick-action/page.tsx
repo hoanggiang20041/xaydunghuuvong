@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/components/ui/toaster'
+import { fmtNum } from '@/lib/constants'
 import { Camera, ArrowRightToLine, ArrowLeftFromLine, Loader2, Search, Truck, CheckCircle2, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { normalizePlateNumber } from '@/lib/plate-utils'
@@ -48,10 +49,11 @@ export default function QuickActionPage() {
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Computed volume
+  // Dimensions are typed in centimeters -> convert to meters
+  const cmToM = (v: string) => (parseFloat(v) > 0 ? parseFloat(v) / 100 : 0)
   const computedVolume = calcMode === 'dimensions' 
-    ? (parseFloat(lengthM) > 0 && parseFloat(widthM) > 0 && parseFloat(heightM) > 0 
-        ? parseFloat(lengthM) * parseFloat(widthM) * parseFloat(heightM) 
+    ? (cmToM(lengthM) > 0 && cmToM(widthM) > 0 && cmToM(heightM) > 0 
+        ? cmToM(lengthM) * cmToM(widthM) * cmToM(heightM) 
         : 0)
     : (parseFloat(manualVolume) > 0 ? parseFloat(manualVolume) : 0)
 
@@ -160,9 +162,9 @@ export default function QuickActionPage() {
 
         // Add dimension fields
         if (calcMode === 'dimensions' && volumeM3 && volumeM3 > 0) {
-          payload.lengthM = parseFloat(lengthM)
-          payload.widthM = parseFloat(widthM)
-          payload.heightM = parseFloat(heightM)
+          payload.lengthM = cmToM(lengthM)
+          payload.widthM = cmToM(widthM)
+          payload.heightM = cmToM(heightM)
           payload.volumeM3 = volumeM3
           payload.calculationMethod = 'dimensions'
         } else if (calcMode === 'manual' && volumeM3 && volumeM3 > 0) {
@@ -497,36 +499,36 @@ export default function QuickActionPage() {
                 <div className="space-y-3">
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1 text-center">Dài (m)</label>
+                      <label className="block text-xs text-slate-400 mb-1 text-center">Dài (cm)</label>
                       <input 
-                        type="number" step="0.1" min="0"
+                        type="number" inputMode="decimal" step="1" min="0"
                         value={lengthM} onChange={e => setLengthM(e.target.value)}
-                        placeholder="0.0"
+                        placeholder="400"
                         className="w-full px-3 py-3 text-lg font-bold bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-blue-500 focus:outline-none text-center"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1 text-center">Rộng (m)</label>
+                      <label className="block text-xs text-slate-400 mb-1 text-center">Rộng (cm)</label>
                       <input 
-                        type="number" step="0.1" min="0"
+                        type="number" inputMode="decimal" step="1" min="0"
                         value={widthM} onChange={e => setWidthM(e.target.value)}
-                        placeholder="0.0"
+                        placeholder="230"
                         className="w-full px-3 py-3 text-lg font-bold bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-blue-500 focus:outline-none text-center"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-slate-400 mb-1 text-center">Cao (m)</label>
+                      <label className="block text-xs text-slate-400 mb-1 text-center">Cao (cm)</label>
                       <input 
-                        type="number" step="0.1" min="0"
+                        type="number" inputMode="decimal" step="1" min="0"
                         value={heightM} onChange={e => setHeightM(e.target.value)}
-                        placeholder="0.0"
+                        placeholder="100"
                         className="w-full px-3 py-3 text-lg font-bold bg-slate-900 text-white border-2 border-slate-600 rounded-xl focus:border-blue-500 focus:outline-none text-center"
                       />
                     </div>
                   </div>
-                  {parseFloat(lengthM) > 0 && parseFloat(widthM) > 0 && parseFloat(heightM) > 0 && (
+                  {computedVolume > 0 && (
                     <div className="text-center text-sm text-slate-400">
-                      {parseFloat(lengthM).toFixed(1)} × {parseFloat(widthM).toFixed(1)} × {parseFloat(heightM).toFixed(1)} =
+                      {fmtNum(cmToM(lengthM), 2)} m × {fmtNum(cmToM(widthM), 2)} m × {fmtNum(cmToM(heightM), 2)} m =
                     </div>
                   )}
                 </div>
