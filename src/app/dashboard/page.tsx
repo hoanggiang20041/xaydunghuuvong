@@ -77,6 +77,12 @@ export default function DashboardPage() {
     return () => clearInterval(interval)
   }, [fetchRecentTrips])
 
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const greeting = () => {
     const h = new Date().getHours()
     if (h < 12) return 'Chào buổi sáng'
@@ -90,10 +96,10 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">
-            {greeting()}, <span className="text-blue-600">{user?.fullName || 'bạn'}</span>
+            {mounted ? greeting() : 'Xin chào'}, <span className="text-blue-600">{user?.fullName || 'bạn'}</span>
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            {new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
+            {mounted ? new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Đang tải ngày tháng...'}
           </p>
         </div>
 

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
-import { Eye, EyeOff, Loader2, AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, AlertTriangle, CheckCircle2, Truck, ShieldCheck, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -29,7 +29,7 @@ export default function LoginPage() {
       if (data.success) {
         setSuccess(true)
         login(data.data.user)
-        setTimeout(() => router.push('/dashboard'), 800)
+        setTimeout(() => window.location.href = '/dashboard', 500)
       } else {
         setError(data.error?.message || 'Đăng nhập thất bại')
       }
@@ -41,144 +41,137 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(180deg, #f7f8fa 0%, #edf2f7 100%)' }}>
-      {/* Top bar */}
-      <div className="w-full h-1.5" style={{ background: 'linear-gradient(90deg, #1a365d 0%, #2c5282 50%, #d69e2e 100%)' }} />
+    <div className="min-h-screen flex bg-[#0f1b2d] overflow-hidden">
       
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
-          {/* Company Logo - text based, NOT icon */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-lg mb-4 shadow-lg" style={{ background: 'linear-gradient(135deg, #1a365d 0%, #2c5282 100%)' }}>
-              <span className="text-2xl font-black text-white tracking-tighter" style={{ fontFamily: 'Georgia, serif' }}>HV</span>
-            </div>
-            <h1 className="text-lg font-bold uppercase tracking-wide" style={{ color: '#1a365d' }}>
-              Công Ty TNHH Hữu Vọng
-            </h1>
-            <h2 className="text-base font-semibold mt-1" style={{ color: '#d69e2e' }}>
-              Hệ thống Quản lý Vận chuyển
-            </h2>
-            <p className="text-xs mt-1" style={{ color: '#718096' }}>
-              Phần mềm quản lý xe ra/vào công trình
-            </p>
+      {/* Left side: Premium Branding */}
+      <div className="hidden lg:flex flex-col justify-between w-1/2 p-16 relative">
+        {/* Background decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-900/20 blur-[120px]" />
+          <div className="absolute top-[40%] -right-[10%] w-[60%] h-[60%] rounded-full bg-amber-600/10 blur-[100px]" />
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#0f1b2d] to-transparent z-10" />
+        </div>
+
+        <div className="relative z-20">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-xl shadow-amber-500/20 mb-8">
+            <span className="text-3xl font-black text-[#0f1b2d]" style={{ fontFamily: 'Georgia, serif' }}>HV</span>
           </div>
+          
+          <h1 className="text-5xl font-bold text-white tracking-tight leading-[1.1] mb-6">
+            Hệ thống<br />Quản lý Vận chuyển<br />
+            <span className="text-amber-400">Chuyên nghiệp</span>
+          </h1>
+          <p className="text-lg text-slate-400 max-w-md leading-relaxed">
+            Nền tảng quản lý xe công trình, theo dõi vật liệu, và tối ưu hóa vận hành dành riêng cho Công Ty TNHH Hữu Vọng.
+          </p>
+        </div>
 
-          {/* Success animation overlay */}
-          {success && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(26,54,93,0.85)' }}>
-              <div className="text-center animate-bounce-in">
-                <div className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: '#38a169', animation: 'scale-check 0.5s ease-out' }}>
-                  <CheckCircle2 className="w-10 h-10 text-white" />
-                </div>
-                <p className="text-white text-lg font-bold">Đăng nhập thành công!</p>
-                <p className="text-white/70 text-sm mt-1">Đang chuyển hướng...</p>
-              </div>
+        <div className="relative z-20 flex items-center gap-6">
+          <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md px-5 py-3 rounded-xl border border-white/10">
+            <ShieldCheck className="w-6 h-6 text-emerald-400" />
+            <div>
+              <div className="text-sm font-semibold text-white">Bảo mật cao</div>
+              <div className="text-xs text-slate-400">Mã hóa dữ liệu 256-bit</div>
             </div>
-          )}
-
-          {/* Login Card */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="px-6 py-3.5 border-b border-gray-100" style={{ background: '#fafbfc' }}>
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4" style={{ color: '#1a365d' }} />
-                <span className="text-sm font-semibold" style={{ color: '#1a365d' }}>ĐĂNG NHẬP HỆ THỐNG</span>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-              {error && (
-                <div className="flex items-start gap-2 p-3 rounded border animate-shake" style={{ background: '#fff5f5', borderColor: '#feb2b2' }}>
-                  <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#e53e3e' }} />
-                  <span className="text-sm" style={{ color: '#c53030' }}>{error}</span>
-                </div>
-              )}
-
-              <div>
-                <label className="form-label">Tên đăng nhập <span style={{ color: '#e53e3e' }}>*</span></label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Nhập tên đăng nhập"
-                  className="form-input"
-                  autoComplete="username"
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Mật khẩu <span style={{ color: '#e53e3e' }}>*</span></label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Nhập mật khẩu"
-                    className="form-input pr-10"
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                    style={{ color: '#a0aec0' }}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || success}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded font-semibold text-white text-sm transition-all disabled:opacity-60"
-                style={{ background: loading ? '#4a5568' : '#1a365d' }}
-              >
-                {loading ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Đang xử lý...</>
-                ) : (
-                  'ĐĂNG NHẬP'
-                )}
-              </button>
-            </form>
           </div>
-
-          {/* Footer */}
-          <div className="text-center mt-6 space-y-1">
-            <p className="text-xs" style={{ color: '#a0aec0' }}>
-              © 2024 Công Ty TNHH Hữu Vọng — Phát triển bởi Nguyễn Hoàng Giang
-            </p>
-            <p className="text-xs" style={{ color: '#cbd5e0' }}>
-              Phiên bản 1.0 | Bảo mật bởi JWT + RBAC
-            </p>
+          <div className="flex items-center gap-3 bg-white/5 backdrop-blur-md px-5 py-3 rounded-xl border border-white/10">
+            <Truck className="w-6 h-6 text-blue-400" />
+            <div>
+              <div className="text-sm font-semibold text-white">Real-time</div>
+              <div className="text-xs text-slate-400">Theo dõi thời gian thực</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes scale-check {
-          0% { transform: scale(0); opacity: 0; }
-          50% { transform: scale(1.2); }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        .animate-bounce-in {
-          animation: bounce-in 0.6s ease-out;
-        }
-        @keyframes bounce-in {
-          0% { transform: scale(0.3); opacity: 0; }
-          50% { transform: scale(1.05); }
-          70% { transform: scale(0.95); }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        .animate-shake {
-          animation: shake 0.4s ease-in-out;
-        }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-8px); }
-          75% { transform: translateX(8px); }
-        }
-      `}</style>
+      {/* Right side: Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-24 bg-[#0a1120] relative border-l border-white/5">
+        <div className="w-full max-w-[420px] relative z-20">
+          
+          {/* Mobile only logo */}
+          <div className="lg:hidden text-center mb-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-xl shadow-amber-500/20 mb-4">
+              <span className="text-2xl font-black text-[#0f1b2d]" style={{ fontFamily: 'Georgia, serif' }}>HV</span>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">HỮU VỌNG</h1>
+            <p className="text-sm text-slate-400">Quản lý Vận chuyển</p>
+          </div>
+
+          <div className="mb-10 text-center lg:text-left">
+            <h2 className="text-3xl font-bold text-white mb-2">Đăng nhập</h2>
+            <p className="text-slate-400">Nhập thông tin tài khoản của bạn để tiếp tục</p>
+          </div>
+
+          {error && (
+            <div className="mb-6 flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+              <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-400 leading-relaxed">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Tên đăng nhập</label>
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                className="w-full px-4 py-3.5 bg-[#132035] border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all font-medium"
+                placeholder="Nhập username hoặc email"
+                autoComplete="username"
+                disabled={loading || success}
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-slate-300">Mật khẩu</label>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-[#132035] border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/50 transition-all font-medium pr-12"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  disabled={loading || success}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || success}
+              className="relative w-full h-14 mt-8 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-900 font-bold rounded-xl transition-all duration-300 flex items-center justify-center overflow-hidden shadow-lg shadow-amber-500/20 disabled:opacity-80 disabled:cursor-not-allowed group"
+            >
+              {success ? (
+                <span className="flex items-center gap-2 text-white">
+                  <CheckCircle2 className="w-5 h-5" /> Đăng nhập thành công
+                </span>
+              ) : loading ? (
+                <Loader2 className="w-6 h-6 animate-spin text-slate-900" />
+              ) : (
+                <span className="flex items-center gap-2 text-lg">
+                  Đăng nhập <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              )}
+            </button>
+          </form>
+          
+          <div className="mt-8 text-center text-xs text-slate-500">
+            &copy; {new Date().getFullYear()} Công Ty TNHH Hữu Vọng. Đã đăng ký bản quyền.
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

@@ -109,11 +109,6 @@ async function main() {
       'notifications.view',
     ],
     GATE_STAFF: [
-      'projects.view',
-      'vehicles.view',
-      'drivers.view',
-      'materials.view',
-      'locations.view',
       'trips.view', 'trips.check_in', 'trips.check_out',
       'notifications.view',
     ],

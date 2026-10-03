@@ -251,12 +251,11 @@ export default function TripsPage() {
                         if (vol <= 0) return <span className="text-slate-400 text-xs">—</span>
                         return (
                           <div className="flex items-center justify-end gap-1">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-900/30 text-blue-300 font-bold text-sm tabular-nums">
-                              {vol.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                              <span className="text-blue-400/60 text-[10px] font-normal">m³</span>
+                            <span className="font-semibold text-blue-700 dark:text-blue-400">
+                              {vol.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} m³
                             </span>
                             {trip.calculationMethod === 'dimensions' && (
-                              <span title={`${trip.lengthM}×${trip.widthM}×${trip.heightM}`}><Ruler className="w-3 h-3 text-blue-400" /></span>
+                              <span title={`${trip.lengthM}×${trip.widthM}×${trip.heightM}`}><Ruler className="w-3 h-3 text-blue-400/70" /></span>
                             )}
                           </div>
                         )
