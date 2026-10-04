@@ -47,8 +47,8 @@ export async function answerQuestion(
   let source: AssistantResponse['source'] = 'rules'
   const understood = isUnderstood(slots, question, !!context)
 
-  // 2) LLM only when rules didn't understand anything
-  if (!understood && llmEnabled()) {
+  // 2) LLM only when rules didn't understand, or found time words they couldn't resolve
+  if ((!understood || slots.uncertainTime) && llmEnabled()) {
     const l = await parseWithLlm(question, catalog, context ? { intent: context.intent, range: context.range.label, material: context.materialName, plate: context.plate } : undefined)
     if (l?.intent) {
       slots = fromLlm(l, catalog)

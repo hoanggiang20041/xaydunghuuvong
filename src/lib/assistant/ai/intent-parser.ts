@@ -25,6 +25,7 @@ export interface ParsedSlots {
   hourFrom?: number
   hourTo?: number
   followUp: boolean
+  uncertainTime?: boolean
 }
 
 const PLATE_RE = /\b\d{2}\s*-?\s*[a-z]{1,2}\d?\s*-?\s*(?:\d[\s.\-]?){4,5}/
@@ -63,6 +64,10 @@ export function parseRules(text: string, catalog: Catalog): ParsedSlots {
   // ---- time of day
   Object.assign(out, detectHours(s))
 
+  // time-ish words present but no range resolved → rules may be wrong, let the LLM try
+  out.uncertainTime = !out.rangeKey && out.hourFrom === undefined &&
+    hasAny(s, ['qua', 'roi', 'truoc', 'bua', 'tuan', 'thang', 'nam', 'ngay', 'sang', 'chieu', 'toi', 'trua', 'dem', 'gio', 'dau thang', 'dau tuan', 'cuoi', 'sau', 'kia', 'mai'])
+
   return out
 }
 
@@ -76,16 +81,16 @@ function detectIntent(s: string, hasDest: boolean): Intent | undefined {
   if (hasAny(s, ['vat lieu nao', 'vat lieu gi', 'loai vat lieu', 'cho gi', 'cho nhung gi', 'cho cai gi'])) return 'material_summary'
   if (hasAny(s, ['bao nhieu xe', 'may xe', 'xe khac nhau', 'bao nhieu chiec', 'may chiec', 'bao nhieu bien so', 'so xe'])) return 'vehicle_count'
   if (hasAny(s, ['khoi', 'm3', 'met khoi', 'khoi luong', 'the tich'])) return 'total_volume'
-  if (hasAny(s, ['chuyen', 'luot', 'so chuyen', 'bao nhieu', 'tong cong', 'thong ke', 'tinh hinh', 'tong ket', 'bao cao'])) return 'trip_count'
+  if (hasAny(s, ['chuyen', 'luot', 'cuoc', 'so chuyen', 'bao nhieu', 'tong cong', 'thong ke', 'tinh hinh', 'tong ket', 'bao cao'])) return 'trip_count'
   return undefined
 }
 
 function detectRange(s: string): Pick<ParsedSlots, 'rangeKey' | 'custom'> {
-  if (hasAny(s, ['hom kia'])) return { rangeKey: 'day_before_yesterday' }
-  if (hasAny(s, ['hom qua'])) return { rangeKey: 'yesterday' }
-  if (hasAny(s, ['tuan truoc'])) return { rangeKey: 'last_week' }
+  if (hasAny(s, ['hom kia', 'bua kia'])) return { rangeKey: 'day_before_yesterday' }
+  if (hasAny(s, ['hom qua', 'bua qua', 'hom bua', 'qua hom qua'])) return { rangeKey: 'yesterday' }
+  if (hasAny(s, ['tuan truoc', 'tuan roi', 'tuan vua roi', 'tuan qua'])) return { rangeKey: 'last_week' }
   if (hasAny(s, ['tuan nay'])) return { rangeKey: 'this_week' }
-  if (hasAny(s, ['thang truoc'])) return { rangeKey: 'last_month' }
+  if (hasAny(s, ['thang truoc', 'thang roi', 'thang vua roi', 'thang qua'])) return { rangeKey: 'last_month' }
   if (hasAny(s, ['thang nay'])) return { rangeKey: 'this_month' }
   if (hasAny(s, ['nam nay'])) return { rangeKey: 'this_year' }
 

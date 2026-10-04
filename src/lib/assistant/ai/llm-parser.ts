@@ -25,16 +25,16 @@ export interface LlmSlots {
 }
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
-const DEFAULT_MODEL = 'llama-3.3-70b-versatile'
+const DEFAULT_MODEL = 'qwen/qwen3.8-27b'
 
 export function llmEnabled() {
-  return !!process.env.GROQ_API_KEY
+  return !!process.env.GROQ_API_KEY?.trim()
 }
 
 export async function parseWithLlm(question: string, catalog: Catalog, previous?: unknown): Promise<LlmSlots | null> {
-  const key = process.env.GROQ_API_KEY
+  const key = process.env.GROQ_API_KEY?.trim()
   if (!key) return null
-  const model = process.env.GROQ_MODEL || DEFAULT_MODEL
+  const model = process.env.GROQ_MODEL?.trim() || DEFAULT_MODEL
 
   const system = [
     'Bạn chuyển câu hỏi tiếng Việt về xe vận chuyển công trình thành tham số cho tool query_stats.',
@@ -48,7 +48,7 @@ export async function parseWithLlm(question: string, catalog: Catalog, previous?
   const body = {
     model,
     temperature: 0,
-    max_tokens: 200,
+    max_tokens: 600,
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: question.slice(0, 300) },
