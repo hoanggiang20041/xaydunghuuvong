@@ -1,11 +1,12 @@
 /**
- * Optional LLM fallback for questions the rule parser can't understand.
+ * Optional LLM fallback (Groq — free tier) for questions the rule parser can't understand.
  *
- * - Only runs when GEMINI_API_KEY is set; otherwise the assistant stays 100% rule-based.
+ * - Only runs when GROQ_API_KEY is set; otherwise the assistant stays 100% rule-based.
  * - Sends ONLY the user's sentence + small name lists (materials / dump sites).
  *   No trip data is ever sent to the model.
- * - The model must call a single function `query_stats` whose params are validated
+ * - The model must call a single tool `query_stats` whose arguments are validated
  *   by the backend before any database access. It never writes SQL.
+ * - Model is configurable via GROQ_MODEL (must support tool use).
  */
 import { INTENTS, RANGE_KEYS, type Intent, type RangeKey } from '../types'
 import type { Catalog } from '../query/catalog'
@@ -23,66 +24,85 @@ export interface LlmSlots {
   hourTo?: number
 }
 
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+const DEFAULT_MODEL = 'llama-3.3-70b-versatile'
+
 export function llmEnabled() {
-  return !!process.env.GEMINI_API_KEY
+  return !!process.env.GROQ_API_KEY
 }
 
 export async function parseWithLlm(question: string, catalog: Catalog, previous?: unknown): Promise<LlmSlots | null> {
-  const key = process.env.GEMINI_API_KEY
+  const key = process.env.GROQ_API_KEY
   if (!key) return null
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+  const model = process.env.GROQ_MODEL || DEFAULT_MODEL
 
   const system = [
-    'Bạn chuyển câu hỏi tiếng Việt về xe vận chuyển công trình thành tham số cho hàm query_stats.',
-    `Hôm nay là ${vnToday()} (Asia/Ho_Chi_Minh).`,
+    'Bạn chuyển câu hỏi tiếng Việt về xe vận chuyển công trình thành tham số cho tool query_stats.',
+    `Hôm nay là ${vnToday()} (Asia/Ho_Chi_Minh). Dùng rangeKey tương đối (today, yesterday, this_week...) khi có thể; chỉ dùng custom + dateFrom/dateTo cho ngày cụ thể.`,
     `Vật liệu hợp lệ: ${catalog.materials.map(m => m.name).join(', ')}.`,
     `Điểm đổ hợp lệ: ${catalog.dumps.map(d => d.name).join(', ') || '(chưa có)'}.`,
-    'Nếu câu hỏi không liên quan tới chuyến xe/khối lượng/xe/điểm đổ thì KHÔNG gọi hàm.',
+    'Nếu câu hỏi không liên quan tới chuyến xe / khối lượng / xe / điểm đổ thì KHÔNG gọi tool, chỉ trả lời "khong_lien_quan".',
     previous ? `Câu hỏi trước (để hiểu câu hỏi nối tiếp): ${JSON.stringify(previous)}` : '',
   ].filter(Boolean).join('\n')
 
   const body = {
-    systemInstruction: { parts: [{ text: system }] },
-    contents: [{ role: 'user', parts: [{ text: question.slice(0, 300) }] }],
+    model,
+    temperature: 0,
+    max_tokens: 200,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: question.slice(0, 300) },
+    ],
     tools: [{
-      functionDeclarations: [{
+      type: 'function',
+      function: {
         name: 'query_stats',
         description: 'Truy vấn thống kê chuyến xe đã được định nghĩa sẵn',
         parameters: {
-          type: 'OBJECT',
+          type: 'object',
           properties: {
-            intent: { type: 'STRING', enum: [...INTENTS] },
-            rangeKey: { type: 'STRING', enum: [...RANGE_KEYS] },
-            dateFrom: { type: 'STRING', description: 'YYYY-MM-DD, chỉ khi rangeKey=custom' },
-            dateTo: { type: 'STRING', description: 'YYYY-MM-DD, chỉ khi rangeKey=custom' },
-            material: { type: 'STRING' },
-            plate: { type: 'STRING', description: 'Biển số xe, ví dụ 51H12345' },
-            destination: { type: 'STRING' },
-            hourFrom: { type: 'INTEGER' },
-            hourTo: { type: 'INTEGER' },
+            intent: { type: 'string', enum: [...INTENTS] },
+            rangeKey: { type: 'string', enum: [...RANGE_KEYS] },
+            dateFrom: { type: 'string', description: 'YYYY-MM-DD, chỉ khi rangeKey=custom' },
+            dateTo: { type: 'string', description: 'YYYY-MM-DD, chỉ khi rangeKey=custom' },
+            material: { type: 'string' },
+            plate: { type: 'string', description: 'Biển số xe, ví dụ 51H12345' },
+            destination: { type: 'string' },
+            hourFrom: { type: 'integer', minimum: 0, maximum: 23 },
+            hourTo: { type: 'integer', minimum: 1, maximum: 24 },
           },
           required: ['intent'],
         },
-      }],
+      },
     }],
-    toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
-    generationConfig: { temperature: 0, maxOutputTokens: 200 },
+    tool_choice: 'auto',
   }
 
   try {
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), 8000)
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body), signal: ctrl.signal },
-    )
+    const res = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    })
     clearTimeout(timer)
-    if (!res.ok) { console.error('LLM parse failed', res.status, await res.text().catch(() => '')); return null }
+    if (!res.ok) {
+      console.error('Groq parse failed', res.status, (await res.text().catch(() => '')).slice(0, 300))
+      return null
+    }
     const json = await res.json()
-    const call = json?.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall)?.functionCall
-    if (!call || call.name !== 'query_stats') return null
-    const a = call.args || {}
+    const call = json?.choices?.[0]?.message?.tool_calls?.find((t: any) => t?.function?.name === 'query_stats')
+    if (!call) return null
+    let a: any = {}
+    try { a = JSON.parse(call.function.arguments || '{}') } catch { return null }
+
     // Validate everything coming back from the model
+    const int = (v: unknown, min: number, max: number) => {
+      const n = Number(v)
+      return Number.isInteger(n) && n >= min && n <= max ? n : undefined
+    }
     return {
       intent: (INTENTS as readonly string[]).includes(a.intent) ? a.intent : undefined,
       rangeKey: (RANGE_KEYS as readonly string[]).includes(a.rangeKey) ? a.rangeKey : undefined,
@@ -91,11 +111,11 @@ export async function parseWithLlm(question: string, catalog: Catalog, previous?
       material: typeof a.material === 'string' ? a.material.slice(0, 50) : undefined,
       plate: typeof a.plate === 'string' ? a.plate.slice(0, 20) : undefined,
       destination: typeof a.destination === 'string' ? a.destination.slice(0, 100) : undefined,
-      hourFrom: Number.isInteger(a.hourFrom) && a.hourFrom >= 0 && a.hourFrom <= 23 ? a.hourFrom : undefined,
-      hourTo: Number.isInteger(a.hourTo) && a.hourTo >= 1 && a.hourTo <= 24 ? a.hourTo : undefined,
+      hourFrom: int(a.hourFrom, 0, 23),
+      hourTo: int(a.hourTo, 1, 24),
     }
   } catch (e) {
-    console.error('LLM parse error', e)
+    console.error('Groq parse error', e)
     return null
   }
 }
