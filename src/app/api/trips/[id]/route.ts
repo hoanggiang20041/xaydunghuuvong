@@ -7,6 +7,7 @@ import { auditAction } from '@/lib/audit'
 import { successResponse, unauthorizedResponse, forbiddenResponse, notFoundResponse, validationErrorResponse, errorResponse, serverErrorResponse } from '@/lib/api-response'
 import { checkOutTripSchema, cancelTripSchema } from '@/lib/validation'
 import { isValidTransition } from '@/lib/constants'
+import { invalidateStats } from '@/lib/assistant/cache/statistics-cache'
 
 // GET trip detail
 export async function GET(
@@ -174,6 +175,7 @@ async function handleCheckOut(trip: any, body: any, user: any) {
     { status: 'COMPLETED', actualVolume: updated.actualVolume, checkOutAt: updated.checkOutAt }
   )
 
+  invalidateStats()
   return successResponse(updated)
 }
 
@@ -216,6 +218,7 @@ async function handleComplete(trip: any, user: any) {
     { status: 'COMPLETED' }
   )
 
+  invalidateStats()
   return successResponse(updated)
 }
 
@@ -263,6 +266,7 @@ async function handleCancel(trip: any, body: any, user: any) {
     { status: 'CANCELLED', reason: parsed.data.reason }
   )
 
+  invalidateStats()
   return successResponse(updated)
 }
 
@@ -316,6 +320,7 @@ async function handleUpdateInfo(trip: any, body: any, user: any) {
     { projectId: updated.projectId, materialId: updated.materialId, vehicleId: updated.vehicleId, pickupLocationId: updated.pickupLocationId, driverId: updated.driverId, dumpLocationId: updated.dumpLocationId, expectedVolume: updated.expectedVolume, actualVolume: updated.actualVolume }
   )
 
+  invalidateStats()
   return successResponse(updated)
 }
 
@@ -344,6 +349,7 @@ export async function DELETE(
 
     await auditAction(user, 'DELETE', 'trips', trip.id, { tripCode: trip.tripCode }, null)
 
+    invalidateStats()
     return successResponse({ success: true })
   } catch (error) {
     console.error('Delete trip error:', error)

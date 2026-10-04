@@ -7,6 +7,7 @@ import { AppSidebar } from '@/components/layout/app-sidebar'
 import { Header } from '@/components/layout/header'
 import { Toaster } from '@/components/ui/toaster'
 import { Loader2 } from 'lucide-react'
+import { VoiceAssistant } from '@/components/assistant/voice-assistant'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -39,6 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
       <Toaster />
+      <VoiceAssistant />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { successResponse, errorResponse, unauthorizedResponse, forbiddenResponse
 import { createTripSchema } from '@/lib/validation'
 import { generateTripCode, startOfDay, endOfDay, vnStart, vnEnd } from '@/lib/date-utils'
 import { normalizePlateNumber } from '@/lib/plate-utils'
+import { invalidateStats } from '@/lib/assistant/cache/statistics-cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -234,6 +235,7 @@ export async function POST(request: NextRequest) {
       expectedVolume: data.expectedVolume,
     })
 
+    invalidateStats()
     return successResponse(trip)
   } catch (error) {
     console.error('Create trip error:', error)
