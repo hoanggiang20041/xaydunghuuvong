@@ -1,7 +1,7 @@
 /**
  * Assistant query engine — shared by voice and text input.
  *
- *   question ─► rule parser ──(not understood & key set)──► LLM function call (1 request max)
+ *   question ─► Groq function call (primary, cached 10 min) ──(error/quota)──► rule parser (backup)
  *            ─► validate + merge short context ─► whitelisted SQL aggregate (cached)
  *            ─► template answer ─► audit log
  */
@@ -12,7 +12,7 @@ import { plateSearchKey } from '@/lib/plate-utils'
 import { INTENTS, type AssistantResponse, type StructuredQuery, type DateRange, type Intent } from './types'
 import { resolveRange, previousRange, isDay } from './ai/dates'
 import { parseRules, type ParsedSlots } from './ai/intent-parser'
-import { llmEnabled, parseWithLlm } from './ai/llm-parser'
+import { llmEnabled, parseWithLlmCached, type LlmSlots } from './ai/llm-parser'
 import * as T from './ai/response-generator'
 import { getCatalog, findMaterial, findDump, findVehicle, extractPlate, type Catalog } from './query/catalog'
 import * as Q from './query/statistics-queries'
@@ -42,21 +42,33 @@ export async function answerQuestion(
 
   const context = sanitizeContext(rawContext, catalog)
 
-  // 1) cheap local parse
-  let slots = parseRules(question, catalog)
+  // 1) cheap local parse (always: entities + backup)
+  const rules = parseRules(question, catalog)
+  const rulesOk = isUnderstood(rules, question, !!context)
+  let slots: ParsedSlots = rules
   let source: AssistantResponse['source'] = 'rules'
-  const understood = isUnderstood(slots, question, !!context)
+  let understood = rulesOk
 
-  // 2) LLM only when rules didn't understand, or found time words they couldn't resolve
-  if ((!understood || slots.uncertainTime) && llmEnabled()) {
-    const l = await parseWithLlm(question, catalog, context ? { intent: context.intent, range: context.range.label, material: context.materialName, plate: context.plate } : undefined)
+  // 2) Groq is the primary parser; rules are the backup when Groq fails / hits quota
+  if (llmEnabled()) {
+    const prev = context ? { intent: context.intent, range: context.range.label, material: context.materialName, plate: context.plate } : undefined
+    const { slots: l, failed } = await parseWithLlmCached(question, catalog, prev)
     if (l?.intent) {
-      slots = fromLlm(l, catalog)
+      slots = fromLlm(l, catalog, rules.followUp || !rules.intent)
+      // fill entities the model missed but rules found
+      if (!slots.materialId && rules.materialId) { slots.materialId = rules.materialId; slots.materialName = rules.materialName }
+      if (!slots.vehicleId && !slots.unknownPlate && (rules.vehicleId || rules.unknownPlate)) { slots.vehicleId = rules.vehicleId; slots.plate = rules.plate; slots.unknownPlate = rules.unknownPlate }
+      if (!slots.destId && !slots.unknownDest && rules.destId) { slots.destId = rules.destId; slots.destName = rules.destName }
+      if (!slots.rangeKey && rules.rangeKey && !rules.uncertainTime) { slots.rangeKey = rules.rangeKey; slots.custom = rules.custom }
       source = 'llm'
+      understood = true
+    } else if (!failed) {
+      // model declined → only trust rules when they found an explicit stats intent
+      understood = rulesOk && (!!rules.intent || (!!context && !!rules.followUp))
     }
   }
 
-  if (source === 'rules' && !understood) {
+  if (!understood) {
     return finish(user, question, { status: 'NOT_UNDERSTOOD', answer: T.FIXED.notUnderstood }, started)
   }
   if (slots.unknownPlate) {
@@ -156,8 +168,8 @@ function sanitizeContext(raw: unknown, catalog: Catalog): StructuredQuery | unde
   }
 }
 
-function fromLlm(l: NonNullable<Awaited<ReturnType<typeof parseWithLlm>>>, catalog: Catalog): ParsedSlots {
-  const s: ParsedSlots = { intent: l.intent, followUp: true }
+function fromLlm(l: LlmSlots, catalog: Catalog, followUp: boolean): ParsedSlots {
+  const s: ParsedSlots = { intent: l.intent, followUp }
   if (l.rangeKey === 'custom' && isDay(l.dateFrom) && isDay(l.dateTo || l.dateFrom)) {
     s.rangeKey = 'custom'; s.custom = { from: l.dateFrom!, to: (l.dateTo || l.dateFrom)! }
   } else if (l.rangeKey && l.rangeKey !== 'custom') s.rangeKey = l.rangeKey

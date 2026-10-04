@@ -1,5 +1,6 @@
 /**
- * Optional LLM fallback (Groq — free tier) for questions the rule parser can't understand.
+ * Primary intent parser (Groq — free tier). The rule parser is used as backup
+ * when Groq errors / hits quota, and to fill entities the model missed.
  *
  * - Only runs when GROQ_API_KEY is set; otherwise the assistant stays 100% rule-based.
  * - Sends ONLY the user's sentence + small name lists (materials / dump sites).
@@ -31,9 +32,31 @@ export function llmEnabled() {
   return !!process.env.GROQ_API_KEY?.trim()
 }
 
-export async function parseWithLlm(question: string, catalog: Catalog, previous?: unknown): Promise<LlmSlots | null> {
+/**
+ * Parse results are cached (relative date keys like "yesterday" stay correct over time),
+ * so repeated questions don't spend Groq quota. `null` = model said "not related".
+ */
+const parseCache = new Map<string, { value: LlmSlots | null; expires: number }>()
+const PARSE_TTL = 10 * 60_000
+
+export async function parseWithLlmCached(question: string, catalog: Catalog, previous?: unknown): Promise<{ slots: LlmSlots | null; failed: boolean }> {
+  const k = `${question.toLowerCase().replace(/\s+/g, ' ').trim()}|${JSON.stringify(previous ?? null)}|${vnToday()}`
+  const hit = parseCache.get(k)
+  if (hit && hit.expires > Date.now()) return { slots: hit.value, failed: false }
+  const res = await parseWithLlm(question, catalog, previous)
+  if (res !== undefined) {
+    if (parseCache.size > 1000) parseCache.clear()
+    parseCache.set(k, { value: res, expires: Date.now() + PARSE_TTL })
+  }
+  return { slots: res ?? null, failed: res === undefined }
+}
+
+let blockedUntil = 0
+
+/** Returns slots, `null` if the model declined (off-topic), or `undefined` on error/timeout. */
+export async function parseWithLlm(question: string, catalog: Catalog, previous?: unknown): Promise<LlmSlots | null | undefined> {
   const key = process.env.GROQ_API_KEY?.trim()
-  if (!key) return null
+  if (!key || Date.now() < blockedUntil) return undefined
   const model = process.env.GROQ_MODEL?.trim() || DEFAULT_MODEL
 
   const system = [
@@ -89,14 +112,18 @@ export async function parseWithLlm(question: string, catalog: Catalog, previous?
     })
     clearTimeout(timer)
     if (!res.ok) {
+      if (res.status === 429) {
+        const wait = Number(res.headers.get('retry-after')) || 10
+        blockedUntil = Date.now() + Math.min(wait, 120) * 1000
+      }
       console.error('Groq parse failed', res.status, (await res.text().catch(() => '')).slice(0, 300))
-      return null
+      return undefined
     }
     const json = await res.json()
     const call = json?.choices?.[0]?.message?.tool_calls?.find((t: any) => t?.function?.name === 'query_stats')
     if (!call) return null
     let a: any = {}
-    try { a = JSON.parse(call.function.arguments || '{}') } catch { return null }
+    try { a = JSON.parse(call.function.arguments || '{}') } catch { return undefined }
 
     // Validate everything coming back from the model
     const int = (v: unknown, min: number, max: number) => {
@@ -116,6 +143,6 @@ export async function parseWithLlm(question: string, catalog: Catalog, previous?
     }
   } catch (e) {
     console.error('Groq parse error', e)
-    return null
+    return undefined
   }
 }
