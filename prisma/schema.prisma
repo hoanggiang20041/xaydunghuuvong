@@ -529,3 +529,18 @@ model SystemSetting {
 
   @@map("system_settings")
 }
+
+/// Chấm công online (chỉ Super Admin). Mỗi user một bản ghi / ngày.
+model Attendance {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  date      String   @db.VarChar(10) // YYYY-MM-DD theo giờ Việt Nam
+  amount    Int      @default(0)     // VNĐ
+  note      String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("attendances")
+}

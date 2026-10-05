@@ -348,3 +348,14 @@ body {
 .animate-fill {
   animation: fill-bar 1s ease-out forwards;
 }
+
+/* ===== Attendance: red X mark ===== */
+@keyframes att-draw { to { stroke-dashoffset: 0; } }
+@keyframes att-pop { 0% { transform: scale(.4) rotate(-12deg); opacity: 0; } 60% { transform: scale(1.15) rotate(3deg); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
+@keyframes att-ring { 0% { transform: scale(.6); opacity: .7; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes att-bump { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.att-x-anim { animation: att-pop .45s cubic-bezier(.2,.9,.3,1.3) both; }
+.att-x-anim line { stroke-dasharray: 40; stroke-dashoffset: 40; animation: att-draw .28s ease-out forwards; }
+.att-x-anim line:nth-child(2) { animation-delay: .18s; }
+.att-ring { animation: att-ring .6s ease-out forwards; }
+.att-bump { animation: att-bump .4s ease-out; }

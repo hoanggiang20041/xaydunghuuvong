@@ -5,11 +5,12 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
   LayoutDashboard, Truck, MapPin, Route, Building2, Car, Users, Package,
-  MapPinned, CircleDot, BarChart3, UserCog, ScrollText, LogOut, ChevronLeft, Menu, Zap, Shield
+  MapPinned, CircleDot, BarChart3, UserCog, ScrollText, LogOut, ChevronLeft, Menu, Zap, Shield, CalendarCheck
 } from 'lucide-react'
 import { useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 
+const SUPER_ADMIN_ONLY = '__super_admin__'
 type NavLink = { label: string; href: string; icon: LucideIcon; permission: string | null }
 type NavDivider = { type: 'divider'; label: string }
 type NavItem = NavLink | NavDivider
@@ -30,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Báo cáo', href: '/dashboard/reports', icon: BarChart3, permission: 'reports.view' },
   { label: 'Người dùng', href: '/dashboard/users', icon: UserCog, permission: 'users.view' },
   { label: 'Nhật ký', href: '/dashboard/audit-logs', icon: ScrollText, permission: 'audit.view' },
+  { label: 'Chấm công', href: '/dashboard/attendance', icon: CalendarCheck, permission: SUPER_ADMIN_ONLY },
 ]
 
 const ROLE_DISPLAY: Record<string, { label: string; color: string; bg: string }> = {
